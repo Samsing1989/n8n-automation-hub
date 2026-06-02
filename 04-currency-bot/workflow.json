@@ -1,0 +1,75 @@
+{
+  "name": "WF - 04 Currency Bot",
+  "nodes": [
+    {
+      "parameters": {"updates": ["message"], "additionalFields": {}},
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [-496, -224],
+      "id": "99073c75-be5e-42c7-b565-12206c696611",
+      "name": "Receive Telegram Message",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {"telegramApi": {"id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.message?.text?.trim() || '';\n\nconst match = text.match(/^(\\d+(?:\\.\\d+)?)\\s*([A-Z]{3})$/i);\n\nif (match) {\n  return [{ json: { amount: parseFloat(match[1]), fromCurrency: match[2].toUpperCase() } }];\n} else {\n  return [{ json: { error: true, chatId: $input.first().json.message?.chat?.id } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-288, -224],
+      "id": "446b6814-8049-49e5-b3bb-ba9bf69d5f12",
+      "name": "Parse Currency Input"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.exchangerate-api.com/v4/latest/{{ $json.fromCurrency }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-80, -224],
+      "id": "44dee2ee-db98-4dbe-b954-1e86f89de7ec",
+      "name": "Fetch Exchange Rates"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {"id": "a034405f", "name": "convertedAmount", "value": "={{ $('Parse Currency Input').item.json.amount * $json.rates.UAH }}", "type": "string"},
+            {"id": "ad55e79a", "name": "fromCurrency", "value": "={{ $('Parse Currency Input').item.json.fromCurrency }}", "type": "string"},
+            {"id": "daf77737", "name": "originalAmount", "value": "={{ $('Parse Currency Input').item.json.amount }}", "type": "number"}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [128, -224],
+      "id": "62725f6d-a7ea-4646-9b98-1cafa98fabf5",
+      "name": "Calculate Converted Amount"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node['Receive Telegram Message'].json.message.chat.id }}",
+        "text": "={{ $json.originalAmount }} {{ $json.fromCurrency }} = {{ $json.convertedAmount }} UAH",
+        "additionalFields": {"appendAttribution": false}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [336, -224],
+      "id": "f53bf0ab-a43a-41cb-89a5-088de78cf24d",
+      "name": "Send Conversion Result",
+      "credentials": {"telegramApi": {"id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot"}}
+    }
+  ],
+  "connections": {
+    "Receive Telegram Message": {"main": [[{"node": "Parse Currency Input", "type": "main", "index": 0}]]},
+    "Parse Currency Input": {"main": [[{"node": "Fetch Exchange Rates", "type": "main", "index": 0}]]},
+    "Fetch Exchange Rates": {"main": [[{"node": "Calculate Converted Amount", "type": "main", "index": 0}]]},
+    "Calculate Converted Amount": {"main": [[{"node": "Send Conversion Result", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "meta": {"instanceId": "YOUR_INSTANCE_ID"}
+}
