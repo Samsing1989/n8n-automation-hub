@@ -1,0 +1,95 @@
+{
+  "name": "WF - 03 Daily Morning Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {"interval": [{"triggerAtHour": 8, "triggerAtMinute": 0}]}
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [-880, 48],
+      "id": "e47be159-884d-427a-98f1-2b890c2c9173",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {"__rl": true, "value": "YOUR_SPREADSHEET_ID", "mode": "id"},
+        "sheetName": {"__rl": true, "value": "gid=0", "mode": "list", "cachedResultName": "Tasks"},
+        "filtersUI": {"values": [{"lookupColumn": "status", "lookupValue": "active"}]},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-656, 48],
+      "id": "b6b6b1b3-eeb9-470a-8296-0e9ec74d0485",
+      "name": "Get Rows",
+      "credentials": {"googleSheetsOAuth2Api": {"id": "YOUR_GOOGLE_CREDENTIAL_ID", "name": "Google Sheets account"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "const tasks = $input.all();\n\nif (tasks.length === 0) {\n  return [{ json: { message: '✅ All tasks done! 🎉', hasUrgent: false } }];\n}\n\nconst now = new Date();\nconst todayStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;\nconst urgent = tasks.filter(t => t.json.deadline === todayStr);\n\nconst today = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });\n\nlet message = `🌅 *Morning Digest*\\n📅 ${today}\\n\\n`;\nmessage += `📋 *Active tasks (${tasks.length}):*\\n\\n`;\n\nconst priorityIcon = { high: '🔴', medium: '🟡', low: '🟢' };\ntasks.forEach((item, index) => {\n  const t = item.json;\n  const icon = priorityIcon[t.priority] || '⚪';\n  message += `${index + 1}. ${icon} ${t.task} ⏰ ${t.deadline}\\n`;\n});\nmessage += `\\n💪 *Have a great day!*`;\n\nlet urgentMessage = null;\nif (urgent.length > 0) {\n  urgentMessage = `🚨 *URGENT TASKS FOR TODAY:*\\n\\n`;\n  urgent.forEach((item, index) => {\n    urgentMessage += `${index + 1}. 🔥 ${item.json.task}\\n`;\n  });\n  urgentMessage += `\\n⚡ Complete today!`;\n}\n\nreturn [{ json: { message, urgentMessage, hasUrgent: urgent.length > 0 } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-448, 48],
+      "id": "a7b30479-0c0e-4948-8ee1-252d2dedc206",
+      "name": "Build Digest"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [{"leftValue": "={{ $json.hasUrgent }}", "rightValue": "={{ true }}", "operator": {"type": "string", "operation": "equals"}}],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-240, 48],
+      "id": "b5027735-7f00-4433-b110-fa0d71882d09",
+      "name": "Has Urgent"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "={{ $json.urgentMessage }}",
+        "additionalFields": {"appendAttribution": false, "parse_mode": "Markdown"}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [-16, -64],
+      "id": "9f8ca8fd-c7a2-4981-a0fa-df9697001837",
+      "name": "Send Urgent",
+      "credentials": {"telegramApi": {"id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot"}}
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "={{ $('Build Digest').item.json.message }}",
+        "additionalFields": {"appendAttribution": false, "parse_mode": "Markdown"}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [-16, 176],
+      "id": "d8c7391b-8d11-4a88-9a4c-975fe55a46b3",
+      "name": "Send Digest",
+      "credentials": {"telegramApi": {"id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot"}}
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {"main": [[{"node": "Get Rows", "type": "main", "index": 0}]]},
+    "Get Rows": {"main": [[{"node": "Build Digest", "type": "main", "index": 0}]]},
+    "Build Digest": {"main": [[{"node": "Has Urgent", "type": "main", "index": 0}]]},
+    "Has Urgent": {
+      "main": [
+        [{"node": "Send Urgent", "type": "main", "index": 0}],
+        [{"node": "Send Digest", "type": "main", "index": 0}]
+      ]
+    },
+    "Send Urgent": {"main": [[{"node": "Send Digest", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "meta": {"instanceId": "YOUR_INSTANCE_ID"}
+}
