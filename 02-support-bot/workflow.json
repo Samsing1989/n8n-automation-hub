@@ -1,0 +1,140 @@
+{
+  "name": "WF - 02 Telegram Support Bot with Categories",
+  "nodes": [
+    {
+      "parameters": {"updates": ["message"], "additionalFields": {}},
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [-416, 176],
+      "id": "9dd572ec-ef6b-4319-9afe-8cb3009c1e77",
+      "name": "Telegram Trigger",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {"telegramApi": {"id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot"}}
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {"conditions": [{"leftValue": "={{ $json.message.text }}", "rightValue": "/start", "operator": {"type": "string", "operation": "equals"}}], "combinator": "and"},
+              "renameOutput": true, "outputKey": "/start"
+            },
+            {
+              "conditions": {"conditions": [{"leftValue": "={{ $json.message.text }}", "rightValue": "/help", "operator": {"type": "string", "operation": "equals"}}], "combinator": "and"},
+              "renameOutput": true, "outputKey": "/help"
+            },
+            {
+              "conditions": {"conditions": [{"leftValue": "={{ $json.message.text }}", "rightValue": "/about", "operator": {"type": "string", "operation": "equals"}}], "combinator": "and"},
+              "renameOutput": true, "outputKey": "/about"
+            }
+          ]
+        },
+        "options": {"fallbackOutput": "extra"}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [-224, 144],
+      "id": "1fc5c4d3-0969-4d22-9d68-535246e6dee0",
+      "name": "Route by Command"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "=Hello, {{ $('Telegram Trigger').item.json.message.from.first_name }}!",
+        "additionalFields": {"appendAttribution": false, "parse_mode": "Markdown"}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "id": "26c8e603-2a30-4045-ac34-ccd45183ee04",
+      "name": "/start",
+      "credentials": {"telegramApi": {"id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot"}}
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "I am your personal assistant",
+        "additionalFields": {"appendAttribution": false, "parse_mode": "Markdown"}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [0, 144],
+      "id": "6ac537d2-49ce-4a80-b968-1bd83e80e06e",
+      "name": "/help",
+      "credentials": {"telegramApi": {"id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot"}}
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "/start - restart bot\n/about - learn more\n/help - show this menu",
+        "additionalFields": {"appendAttribution": false, "parse_mode": "Markdown"}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [0, 272],
+      "id": "7e177fe7-1181-4e47-be9a-bb832820f908",
+      "name": "/about",
+      "credentials": {"telegramApi": {"id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot"}}
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "Unknown command. Use:\n/start\n/help\n/about",
+        "additionalFields": {"appendAttribution": false}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [0, 448],
+      "id": "704ab4d0-55af-446d-a1a0-edcfa8740702",
+      "name": "other",
+      "credentials": {"telegramApi": {"id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot"}}
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {"__rl": true, "value": "YOUR_SPREADSHEET_ID", "mode": "id"},
+        "sheetName": {"__rl": true, "value": "gid=0", "mode": "list", "cachedResultName": "Sheet1"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ new Date().toISOString() }}",
+            "User ID": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+            "Name": "={{ $('Telegram Trigger').item.json.message.from.first_name }}",
+            "Command": "={{ $('Telegram Trigger').item.json.message.text }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {"id": "Timestamp", "displayName": "Timestamp", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "User ID", "displayName": "User ID", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Name", "displayName": "Name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Command", "displayName": "Command", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [304, 144],
+      "id": "8f5081da-65f4-41f7-92fd-35e75047a232",
+      "name": "Log Message to Sheets",
+      "credentials": {"googleSheetsOAuth2Api": {"id": "YOUR_GOOGLE_CREDENTIAL_ID", "name": "Google Sheets account"}}
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {"main": [[{"node": "Route by Command", "type": "main", "index": 0}]]},
+    "Route by Command": {
+      "main": [
+        [{"node": "/start", "type": "main", "index": 0}],
+        [{"node": "/help", "type": "main", "index": 0}],
+        [{"node": "/about", "type": "main", "index": 0}],
+        [{"node": "other", "type": "main", "index": 0}]
+      ]
+    },
+    "/start": {"main": [[{"node": "Log Message to Sheets", "type": "main", "index": 0}]]},
+    "/help": {"main": [[{"node": "Log Message to Sheets", "type": "main", "index": 0}]]},
+    "/about": {"main": [[{"node": "Log Message to Sheets", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "meta": {"instanceId": "YOUR_INSTANCE_ID"}
+}
