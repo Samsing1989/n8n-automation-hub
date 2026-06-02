@@ -1,0 +1,111 @@
+{
+  "name": "WF - 05 Lead Validator",
+  "nodes": [
+    {
+      "parameters": {"httpMethod": "POST", "path": "Lead", "responseMode": "responseNode", "options": {}},
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-480, 0],
+      "id": "1a076cf9-24b4-477b-8df4-f4f4a81bb3bf",
+      "name": "Webhook",
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [{"leftValue": "={{$json.body.email }}", "rightValue": "=@", "operator": {"type": "string", "operation": "contains"}}],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-272, 0],
+      "id": "5d7b0ed2-6bad-4e6f-b20d-c3e9b1281308",
+      "name": "Validate Lead"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {"__rl": true, "value": "YOUR_SPREADSHEET_ID", "mode": "id"},
+        "sheetName": {"__rl": true, "value": "gid=0", "mode": "list", "cachedResultName": "form"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $('Webhook').item.json.body.email }}",
+            "Name": "={{ $json.body.name }}",
+            "Phone": "={{ $json.body.phone }}",
+            "Source": "={{ $json.body.source }}",
+            "Date": "={{ new Date().toLocaleString() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {"id": "Date", "displayName": "Date", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Name", "displayName": "Name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Email", "displayName": "Email", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Phone", "displayName": "Phone", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Source", "displayName": "Source", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-64, -96],
+      "id": "1269e19b-f706-4f6c-8506-7fd977999082",
+      "name": "Save Lead",
+      "credentials": {"googleSheetsOAuth2Api": {"id": "YOUR_GOOGLE_CREDENTIAL_ID", "name": "Google Sheets account"}}
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=🔥 New Lead!\n👤 Name: {{ $json.Name }}\n📧 Email: {{ $json.Email }}\n📞 Phone: {{ $json.Phone }}\n🌐 Source: {{ $json.Source }}\n⏰ Date: {{ new Date().toLocaleString() }}\n✅ Saved to Google Sheets",
+        "additionalFields": {"appendAttribution": false}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [144, -96],
+      "id": "6552f143-7509-4527-bdc9-1fb495df0c5d",
+      "name": "Notify Manager",
+      "credentials": {"telegramApi": {"id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot"}}
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"ok\",\n  \"message\": \"Thank you! We will contact you shortly.\"\n}",
+        "options": {"responseCode": 200}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [352, -96],
+      "id": "d3233ee7-85ab-4387-b3e9-d8006a3fcae3",
+      "name": "Success Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"error\": \"Invalid email\",\n  \"message\": \"Please enter a valid email address.\"\n}",
+        "options": {"responseCode": 400}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [352, 64],
+      "id": "fd40b106-f180-468b-a794-e6f978a87503",
+      "name": "Rejected Response"
+    }
+  ],
+  "connections": {
+    "Webhook": {"main": [[{"node": "Validate Lead", "type": "main", "index": 0}]]},
+    "Validate Lead": {
+      "main": [
+        [{"node": "Save Lead", "type": "main", "index": 0}],
+        [{"node": "Rejected Response", "type": "main", "index": 0}]
+      ]
+    },
+    "Save Lead": {"main": [[{"node": "Notify Manager", "type": "main", "index": 0}]]},
+    "Notify Manager": {"main": [[{"node": "Success Response", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "meta": {"instanceId": "YOUR_INSTANCE_ID"}
+}
