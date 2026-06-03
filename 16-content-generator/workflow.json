@@ -1,0 +1,122 @@
+{
+  "name": "WF - 16 Content Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "weeks", "triggerAtDay": [1], "triggerAtHour": 9 }] }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [-560, -32],
+      "id": "c7189e7b-51eb-41e7-852b-3b1b49875a89",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a82a73a4",
+              "name": "prompt",
+              "value": "Generate exactly 5 social media posts for an online store.\nEach post starts on a new line beginning with ###.\nPosts should vary: product announcement, style tips, promotion, customer review, motivation.\nEach post under 300 characters. Use emojis.\nFormat STRICTLY: ###Text of post 1\\n###Text of post 2\\n...",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-352, -32],
+      "id": "7eceafae-1b1d-4d3b-996f-ba4377d366b0",
+      "name": "Set Content Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [{\"role\": \"user\", \"content\": {{ JSON.stringify($json.prompt) }}}],\n  \"temperature\": 0.7,\n  \"max_tokens\": 1500\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-144, -32],
+      "id": "4222bd18-0693-484c-9c24-6e38a37b45f5",
+      "name": "Generate Posts Groq",
+      "credentials": {
+        "httpHeaderAuth": { "id": "YOUR_GROQ_CREDENTIAL_ID", "name": "Groq API" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawText = $input.first().json.choices[0].message.content;\nconst parts = rawText.split('###').filter(p => p.trim().length > 0);\n\nconst monday = new Date();\nmonday.setDate(monday.getDate() - monday.getDay() + 1);\n\nconst results = [];\nfor (let i = 0; i < Math.min(parts.length, 5); i++) {\n  const pubDate = new Date(monday);\n  pubDate.setDate(monday.getDate() + i);\n  const dateStr = pubDate.toLocaleDateString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric' });\n  results.push({\n    json: {\n      number: i + 1,\n      publish_date: dateStr,\n      post_text: parts[i].trim(),\n      status: 'Pending review'\n    }\n  });\n}\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [64, -32],
+      "id": "40aef73e-e4ea-4111-853c-de0da9ae1735",
+      "name": "Parse Posts Array"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "YOUR_SPREADSHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "gid=0", "mode": "list", "cachedResultName": "Content Plan" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "№": "={{ $json.number }}",
+            "Publish Date": "={{ $json.publish_date }}",
+            "Post Text": "={{ $json.post_text }}",
+            "Status": "={{ $json.status }}"
+          },
+          "matchingColumns": ["№"],
+          "schema": [
+            { "id": "№", "displayName": "№", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Publish Date", "displayName": "Publish Date", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Post Text", "displayName": "Post Text", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Status", "displayName": "Status", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [272, -32],
+      "id": "1bc0c883-5d5f-4a76-ac04-9ee6d59e7b94",
+      "name": "Save Posts to Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GOOGLE_CREDENTIAL_ID", "name": "Google Sheets account" }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=📅 Weekly content plan is ready!\n\n✅ 5 posts generated for Instagram/Facebook\n📊 Review sheet: YOUR_SPREADSHEET_URL\n\nSet status to 'Approved' or 'Needs revision' for each post.",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [480, -32],
+      "id": "d90c9524-7d73-4d60-8907-d70440f6f238",
+      "name": "Notify Manager Telegram",
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": { "main": [[{ "node": "Set Content Prompt", "type": "main", "index": 0 }]] },
+    "Set Content Prompt": { "main": [[{ "node": "Generate Posts Groq", "type": "main", "index": 0 }]] },
+    "Generate Posts Groq": { "main": [[{ "node": "Parse Posts Array", "type": "main", "index": 0 }]] },
+    "Parse Posts Array": { "main": [[{ "node": "Save Posts to Sheets", "type": "main", "index": 0 }]] },
+    "Save Posts to Sheets": { "main": [[{ "node": "Notify Manager Telegram", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": { "instanceId": "YOUR_INSTANCE_ID" }
+}
