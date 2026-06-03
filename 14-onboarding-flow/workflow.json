@@ -1,0 +1,614 @@
+{
+  "name": "WF - 14 Onboarding Flow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "onboarding",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1632,
+        -48
+      ],
+      "id": "19caed71-92f9-44da-bbcd-2738bbaf5e1d",
+      "name": "CRM Trigger",
+      "webhookId": "fe8f647a-1707-4af7-a01d-c1e929017137"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.body.client_email }}",
+        "subject": "Ласкаво просимо! Раді бачити вас серед наших клієнтів",
+        "message": "=<p>Привіт, {{ $json.body.client_name }}!</p>\n<p>Ми раді, що ви обрали нас. Ваш акаунт вже активний.</p>\n<p>Якщо виникнуть питання — ми завжди поруч.</p>\n",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -1424,
+        -48
+      ],
+      "id": "325c4d6a-11a8-48c0-a563-9cf3bf793328",
+      "name": "Email 1 - Welcome",
+      "webhookId": "76556f61-eefc-45aa-9576-d98a2bcdc956",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('CRM Trigger').item.json.body.manager_chat_id }}",
+        "text": "=📧 Лист 1 надіслано\n👤 Клієнт: {{ $('CRM Trigger').item.json.body.client_name }}\n📮 Email: {{ $('CRM Trigger').item.json.body.client_email }}\n🕐 Час: {{ $now.toFormat('dd.MM.yyyy HH:mm') }}\n",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1216,
+        -48
+      ],
+      "id": "9878cd6f-beb7-4e72-a60f-f43c10aa3236",
+      "name": "Telegram - After Email 1",
+      "webhookId": "5927f0da-2e3d-402a-b138-b7ddb4063249",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Onboarding Log ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QMqJOAsVhR7n9QPqVqWtztFZc0tR_LVF0VIP6PjnHWk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QMqJOAsVhR7n9QPqVqWtztFZc0tR_LVF0VIP6PjnHWk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sent_at": "={{ $now.toFormat('dd.MM.yyyy HH:mm') }}",
+            "email_number": "1",
+            "email_subject": "Ласкаво просимо",
+            "client_name": "={{ $('CRM Trigger').item.json.body.client_name }}",
+            "client_email": "={{ $('CRM Trigger').item.json.body.client_email }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "client_name",
+              "displayName": "client_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "client_email",
+              "displayName": "client_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_number",
+              "displayName": "email_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_subject",
+              "displayName": "email_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sent_at",
+              "displayName": "sent_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1008,
+        -48
+      ],
+      "id": "74776eb0-f562-4a09-a41b-e4869eea80ad",
+      "name": "Sheets -Log Email.1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -800,
+        -48
+      ],
+      "id": "a34a8687-62fa-485e-a5ed-8b157df63fec",
+      "name": "Wait 1 Day",
+      "webhookId": "2da61d74-d887-4516-82c9-3e449cfa0ff9"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('CRM Trigger').item.json.body.client_email }}",
+        "subject": "Як розпочати роботу — покрокова інструкція",
+        "message": "=<p>Привіт, {{ $('CRM Trigger').item.json.body.client_name }}!</p>\n<p>Ось кілька кроків, щоб швидко розпочати:</p>\n<ol>\n  <li>Увійдіть до свого акаунту</li>\n  <li>Заповніть профіль</li>\n  <li>Ознайомтесь з основними функціями</li>\n</ol>\n<p>Якщо щось незрозуміло — звертайтесь!</p>\n",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -592,
+        -48
+      ],
+      "id": "80bafb41-114b-4518-8869-165e8d2ae1e3",
+      "name": "Email 2 -Intructions",
+      "webhookId": "48bbfa7a-bc68-4696-9e41-8c6a6fdf8cd7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('CRM Trigger').item.json.body.manager_chat_id }}",
+        "text": "=📧 Лист 2 надіслано\n👤 Клієнт: {{ $('CRM Trigger').item.json.body.client_name }}\n📮 Email: {{ $('CRM Trigger').item.json.body.client_email }}\n🕐 Час: {{ $now.toFormat('dd.MM.yyyy HH:mm') }}\n",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -384,
+        -48
+      ],
+      "id": "9be05bbc-283d-4ce7-adb6-71ebb8d15d1a",
+      "name": "Telegram - After Email 2",
+      "webhookId": "5927f0da-2e3d-402a-b138-b7ddb4063249",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Onboarding Log ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QMqJOAsVhR7n9QPqVqWtztFZc0tR_LVF0VIP6PjnHWk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QMqJOAsVhR7n9QPqVqWtztFZc0tR_LVF0VIP6PjnHWk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sent_at": "={{ $now.toFormat('dd.MM.yyyy HH:mm') }}",
+            "email_number": "2",
+            "email_subject": "Інструкція по початку роботи",
+            "client_name": "={{ $('CRM Trigger').item.json.body.client_name }}",
+            "client_email": "={{ $('CRM Trigger').item.json.body.client_email }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "client_name",
+              "displayName": "client_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "client_email",
+              "displayName": "client_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_number",
+              "displayName": "email_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_subject",
+              "displayName": "email_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sent_at",
+              "displayName": "sent_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -176,
+        -48
+      ],
+      "id": "79f60329-d2d8-4814-bd6d-4ba69862c177",
+      "name": "Sheets -Log Email 2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        32,
+        -48
+      ],
+      "id": "1e3671fe-3e41-42df-85df-6c6100b178e0",
+      "name": "Wait 3 Day",
+      "webhookId": "2da61d74-d887-4516-82c9-3e449cfa0ff9"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('CRM Trigger').item.json.body.client_email }}",
+        "subject": "Як справи? Є питання?",
+        "message": "=<p>Привіт, {{ $('CRM Trigger').item.json.body.client_name }}!</p>\n<p>Пройшло кілька днів — хотіли дізнатися, як у вас справи.</p>\n<p>Якщо виникли питання — перегляньте наш\n<a href=\"https://yoursite.com/faq\">FAQ</a>.</p>\n<p>Або просто відповідайте на цей лист — ми читаємо кожне повідомлення.</p>\n",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        -48
+      ],
+      "id": "0132bce6-604f-46fb-b2c6-4ecf99d26b9b",
+      "name": "Email 3 - FAQ",
+      "webhookId": "76556f61-eefc-45aa-9576-d98a2bcdc956",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('CRM Trigger').item.json.body.manager_chat_id }}",
+        "text": "=Онбординг завершено!\nВсі 3 листи надіслано клієнту {{ $('CRM Trigger').item.json.body.client_name }}\n",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        -48
+      ],
+      "id": "677ca687-e820-4980-bf30-dea26a101340",
+      "name": "Telegram - After Email 3",
+      "webhookId": "5927f0da-2e3d-402a-b138-b7ddb4063249",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Onboarding Log ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QMqJOAsVhR7n9QPqVqWtztFZc0tR_LVF0VIP6PjnHWk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QMqJOAsVhR7n9QPqVqWtztFZc0tR_LVF0VIP6PjnHWk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sent_at": "={{ $now.toFormat('dd.MM.yyyy HH:mm') }}",
+            "email_number": "3",
+            "email_subject": "фініш",
+            "client_name": "={{ $('CRM Trigger').item.json.body.client_name }}",
+            "client_email": "={{ $('CRM Trigger').item.json.body.client_email }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "client_name",
+              "displayName": "client_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "client_email",
+              "displayName": "client_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_number",
+              "displayName": "email_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_subject",
+              "displayName": "email_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sent_at",
+              "displayName": "sent_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        656,
+        -48
+      ],
+      "id": "9c25b2bc-8f68-47e9-8b39-b7d562df0527",
+      "name": "Sheets -Log Email 3",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "CRM Trigger": {
+      "main": [
+        [
+          {
+            "node": "Email 1 - Welcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email 1 - Welcome": {
+      "main": [
+        [
+          {
+            "node": "Telegram - After Email 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram - After Email 1": {
+      "main": [
+        [
+          {
+            "node": "Sheets -Log Email.1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets -Log Email.1": {
+      "main": [
+        [
+          {
+            "node": "Wait 1 Day",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 1 Day": {
+      "main": [
+        [
+          {
+            "node": "Email 2 -Intructions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email 2 -Intructions": {
+      "main": [
+        [
+          {
+            "node": "Telegram - After Email 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram - After Email 2": {
+      "main": [
+        [
+          {
+            "node": "Sheets -Log Email 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets -Log Email 2": {
+      "main": [
+        [
+          {
+            "node": "Wait 3 Day",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 3 Day": {
+      "main": [
+        [
+          {
+            "node": "Email 3 - FAQ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email 3 - FAQ": {
+      "main": [
+        [
+          {
+            "node": "Telegram - After Email 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram - After Email 3": {
+      "main": [
+        [
+          {
+            "node": "Sheets -Log Email 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "62861a35-7868-432d-a8c9-aae16bf60f92",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "8Pvu7IPnpSuSnKLi",
+  "tags": []
+}
