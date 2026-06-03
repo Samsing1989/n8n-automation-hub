@@ -1,0 +1,126 @@
+{
+  "name": "WF - 09 Support Bot",
+  "nodes": [
+    {
+      "parameters": { "updates": ["message"], "additionalFields": {} },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [-512, -32],
+      "id": "14111f33-27a6-4d0b-bfb2-2653ed2cf63e",
+      "name": "Telegram Trigger",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.message.text.toLowerCase() }}", "rightValue": "price", "operator": { "type": "string", "operation": "contains" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true, "outputKey": "Price"
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.message.text.toLowerCase() }}", "rightValue": "deliv", "operator": { "type": "string", "operation": "contains" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true, "outputKey": "delivery"
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.message.text.toLowerCase() }}", "rightValue": "retur", "operator": { "type": "string", "operation": "contains" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true, "outputKey": "returns"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [-336, -64],
+      "id": "c616b966-c17d-439c-97ec-25377d42e26e",
+      "name": "Route by Topic"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "=💰 Our pricing:\n\n• Basic — from $15/mo\n• Standard — from $35/mo\n• Premium — from $75/mo\n\nFor a custom quote, leave your contact and we'll call back within 30 minutes.",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [16, -208],
+      "id": "65e9e8ad-0d8d-4f91-a9ea-1e98a8085d02",
+      "name": "Reply Price",
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "=🚚 Delivery info:\n\n• Standard — 3-5 business days\n• Express — next day\n• Pickup — free\n\nFree delivery on orders over $50!\n\n📦 Track your order with the tracking number we send via email.",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [16, -80],
+      "id": "4684cea2-f064-4883-8d6e-30aa614d502d",
+      "name": "Reply Delivery",
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "=🔄 Return policy:\n\n✅ Returns accepted within 14 days\n✅ Item must be in original packaging\n✅ Receipt or order number required\n\nHow to return:\n1. Email support@yourstore.com\n2. Include order number and reason\n3. We'll respond within 24 hours",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [16, 48],
+      "id": "fed099d0-d9f5-4168-8771-626ad1762573",
+      "name": "Reply Returns",
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=🔔 New client request!\n👤 Chat ID: {{ $('Telegram Trigger').item.json.message.chat.id }}\n💬 Message: {{ $('Telegram Trigger').item.json.message.text }}\n🕐 Time: {{ $now.toFormat('dd.MM.yyyy HH:mm') }}\n\nNeeds your reply!",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [16, 208],
+      "id": "1dbcef29-f726-48bc-a926-debbaf916d58",
+      "name": "Notify Manager (Fallback)",
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": { "main": [[{ "node": "Route by Topic", "type": "main", "index": 0 }]] },
+    "Route by Topic": {
+      "main": [
+        [{ "node": "Reply Price", "type": "main", "index": 0 }],
+        [{ "node": "Reply Delivery", "type": "main", "index": 0 }],
+        [{ "node": "Reply Returns", "type": "main", "index": 0 }],
+        [{ "node": "Notify Manager (Fallback)", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": { "instanceId": "YOUR_INSTANCE_ID" }
+}
