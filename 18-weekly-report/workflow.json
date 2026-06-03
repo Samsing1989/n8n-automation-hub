@@ -1,0 +1,134 @@
+{
+  "name": "WF - 18 Weekly Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "weeks", "triggerAtDay": [5], "triggerAtHour": 17 }] }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [-992, -32],
+      "id": "c658e9e8-a3f7-4876-b628-2dd946f1b6b7",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": { "__rl": true, "value": "YOUR_SPREADSHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "gid=0", "mode": "list", "cachedResultName": "Sales" },
+        "filtersUI": { "values": [] },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-784, -32],
+      "id": "ed9c14ea-f67a-4e9a-a337-927bf12e91a0",
+      "name": "Read Sales Data",
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GOOGLE_CREDENTIAL_ID", "name": "Google Sheets account" }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": { "__rl": true, "value": "YOUR_SPREADSHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "2145381262", "mode": "list", "cachedResultName": "Leads" },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-576, -32],
+      "id": "b5da4c7d-2f44-4b0d-a8dd-00ac9e88d8f6",
+      "name": "Read Leads Data",
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GOOGLE_CREDENTIAL_ID", "name": "Google Sheets account" }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": { "__rl": true, "value": "YOUR_SPREADSHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "1307812436", "mode": "list", "cachedResultName": "Orders" },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-368, -32],
+      "id": "90004c64-cd00-4aca-981d-707fd71778dc",
+      "name": "Read Orders Data",
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GOOGLE_CREDENTIAL_ID", "name": "Google Sheets account" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const salesItems = $('Read Sales Data').all();\nconst leadsItems = $('Read Leads Data').all();\nconst ordersItems = $('Read Orders Data').all();\n\nconst salesData = salesItems.map(i => i.json);\nconst totalSales = salesData.reduce((sum, r) => sum + (parseFloat(r.Amount) || 0), 0);\nconst salesCount = salesData.length;\nconst avgSale = salesCount > 0 ? (totalSales / salesCount).toFixed(2) : 0;\n\nconst leadsData = leadsItems.map(i => i.json);\nconst totalLeads = leadsData.length;\nconst qualifiedLeads = leadsData.filter(r => r.Status === 'Qualified').length;\nconst closedLeads = leadsData.filter(r => r.Status === 'Closed').length;\nconst conversionRate = totalLeads > 0 ? ((closedLeads / totalLeads) * 100).toFixed(1) : 0;\n\nconst ordersData = ordersItems.map(i => i.json);\nconst totalOrders = ordersData.length;\nconst completedOrders = ordersData.filter(r => r.Status === 'Completed').length;\nconst totalRevenue = ordersData.filter(r => r.Status === 'Completed').reduce((sum, r) => sum + (parseFloat(r.Amount) || 0), 0);\nconst avgOrder = completedOrders > 0 ? (totalRevenue / completedOrders).toFixed(2) : 0;\n\nreturn [{ json: { totalSales, salesCount, avgSale, totalLeads, qualifiedLeads, closedLeads, conversionRate, totalOrders, completedOrders, totalRevenue, avgOrder, reportDate: new Date().toLocaleDateString('en-US') } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-160, -32],
+      "id": "0c89e740-e51f-4254-8a40-98252a400cf1",
+      "name": "Build Report Data"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0bc98eb3",
+              "name": "htmlReport",
+              "value": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:Arial,sans-serif;max-width:600px;margin:0 auto}h1{color:#1F4E79;border-bottom:3px solid #2E86C1;padding-bottom:10px}h2{color:#2E86C1;margin-top:25px}table{width:100%;border-collapse:collapse;margin-top:10px}th{background:#1F4E79;color:white;padding:10px;text-align:left}td{padding:8px 10px;border-bottom:1px solid #ddd}tr:nth-child(even){background:#F2F3F4}.metric{font-size:28px;font-weight:bold;color:#1F4E79}.card{background:#D6E4F0;border-radius:8px;padding:15px;margin:10px 0}.footer{color:#888;font-size:12px;margin-top:30px}</style></head><body><h1>📊 Weekly Report</h1><p>Date: <strong>{{ $json.reportDate }}</strong></p><h2>💰 Sales</h2><div class=\"card\"><table><tr><th>Metric</th><th>Value</th></tr><tr><td>Total sales</td><td class=\"metric\">${{ $json.totalSales }}</td></tr><tr><td>Number of sales</td><td>{{ $json.salesCount }}</td></tr><tr><td>Average deal</td><td>${{ $json.avgSale }}</td></tr></table></div><h2>🎯 Leads</h2><div class=\"card\"><table><tr><th>Metric</th><th>Value</th></tr><tr><td>Total leads</td><td>{{ $json.totalLeads }}</td></tr><tr><td>Qualified</td><td>{{ $json.qualifiedLeads }}</td></tr><tr><td>Closed (conversion)</td><td>{{ $json.closedLeads }} ({{ $json.conversionRate }}%)</td></tr></table></div><h2>📦 Orders</h2><div class=\"card\"><table><tr><th>Metric</th><th>Value</th></tr><tr><td>Total orders</td><td>{{ $json.totalOrders }}</td></tr><tr><td>Completed</td><td>{{ $json.completedOrders }}</td></tr><tr><td>Total revenue</td><td>${{ $json.totalRevenue }}</td></tr><tr><td>Average order</td><td>${{ $json.avgOrder }}</td></tr></table></div><p class=\"footer\">Auto-generated by n8n · Every Friday at 17:00</p></body></html>",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [48, -32],
+      "id": "56627f5f-b8f0-4bfc-9e34-dbad30144b9d",
+      "name": "Prepare Report HTML"
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL",
+        "subject": "=📊 Weekly Business Report — {{ $('Build Report Data').item.json.reportDate }}",
+        "message": "={{ $json.htmlReport }}",
+        "options": { "appendAttribution": false }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [256, -32],
+      "id": "7fbbbd65-ee3c-4a63-8692-11ce4507537d",
+      "name": "Send Report Email",
+      "credentials": {
+        "gmailOAuth2": { "id": "YOUR_GMAIL_CREDENTIAL_ID", "name": "Gmail account" }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=📊 *Weekly Report — {{ $('Build Report Data').item.json.reportDate }}*\n\n💰 *Sales*\n• Total: ${{ $('Build Report Data').item.json.totalSales }}\n• Count: {{ $('Build Report Data').item.json.salesCount }} deals\n• Avg deal: ${{ $('Build Report Data').item.json.avgSale }}\n\n🎯 *Leads*\n• Total: {{ $('Build Report Data').item.json.totalLeads }}\n• Conversion: {{ $('Build Report Data').item.json.conversionRate }}%\n\n📦 *Orders*\n• Revenue: ${{ $('Build Report Data').item.json.totalRevenue }}\n• Completed: {{ $('Build Report Data').item.json.completedOrders }} of {{ $('Build Report Data').item.json.totalOrders }}\n\n✅ Full report sent to email",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [464, -32],
+      "id": "9c0c0a87-c7b6-4ceb-95b9-a1864b22b292",
+      "name": "Notify Report Sent",
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": { "main": [[{ "node": "Read Sales Data", "type": "main", "index": 0 }]] },
+    "Read Sales Data": { "main": [[{ "node": "Read Leads Data", "type": "main", "index": 0 }]] },
+    "Read Leads Data": { "main": [[{ "node": "Read Orders Data", "type": "main", "index": 0 }]] },
+    "Read Orders Data": { "main": [[{ "node": "Build Report Data", "type": "main", "index": 0 }]] },
+    "Build Report Data": { "main": [[{ "node": "Prepare Report HTML", "type": "main", "index": 0 }]] },
+    "Prepare Report HTML": { "main": [[{ "node": "Send Report Email", "type": "main", "index": 0 }]] },
+    "Send Report Email": { "main": [[{ "node": "Notify Report Sent", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": { "instanceId": "YOUR_INSTANCE_ID" }
+}
