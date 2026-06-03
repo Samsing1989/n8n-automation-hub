@@ -1,0 +1,554 @@
+{
+  "name": "WF - 20 AI Memory Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -896,
+        48
+      ],
+      "id": "e609d613-3cc2-41de-9fbe-6d257694f10f",
+      "name": "Receive User Message",
+      "webhookId": "b76e1377-47ae-40e4-b1da-4fc5bfaa7b48",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $('Receive User Message').item.json.message;\nconst chatId = message.chat.id;\nconst text = message.text || '';\n\n// Повертаємо дані для наступних нод\nreturn [{\n  json: {\n    chatId: chatId,\n    userText: text,\n    isClear: text.trim().toLowerCase() === '/clear'\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        48
+      ],
+      "id": "298fc2b2-9309-48b5-8727-dbc74d908383",
+      "name": "Extract Message Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ca3a43e6-cffa-4bf0-9279-945d553ba603",
+              "leftValue": "={{ $json.isClear }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -512,
+        48
+      ],
+      "id": "cf853580-46b6-4515-94ea-7350a36ca7b3",
+      "name": "Check Memory Exists"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AI_Memory_Bot",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": " history",
+          "cachedResultUrl": ""
+        },
+        "startIndex": 3,
+        "numberToDelete": 100
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -304,
+        -48
+      ],
+      "id": "cf042fd6-a1ac-40e7-80ba-5df7f526a486",
+      "name": "Clear Old Memory",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Extract Message Data').item.json.chatId }}",
+        "text": "Пам'ять очищена! Починаємо розмову з нуля.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -96,
+        -48
+      ],
+      "id": "5fb2fba0-23cb-4156-a9a7-9367a52beddc",
+      "name": "Delete Typing Indicator",
+      "webhookId": "69ba020f-5a1e-400f-bfaa-70391ac5a403",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AI_Memory_Bot",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": " history",
+          "cachedResultUrl": ""
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "chat_id",
+              "lookupValue": "={{ $json.chatId }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": false
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -304,
+        144
+      ],
+      "id": "8b505553-9b20-4743-be3e-ab5e9a472acf",
+      "name": "Load Conversation History",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Отримуємо всі рядки з Google Sheets\nconst allItems = $input.all();\nconst chatId = $('Extract Message Data').item.json.chatId;\nconst userText = $('Extract Message Data').item.json.userText;\n\n// Беремо останні 10 повідомлень і реверсуємо\nconst rows = allItems\n.map(item => item.json)\n.filter(row => String(row.chat_id) === String(chatId))\n.filter(row => row.role === 'user' || row.role === 'assistant') // фільтр невалідних\n.filter(row => row.content && row.content.trim() !== '') // фільтр порожніх\n.slice(0, 10)\n.reverse();\n\n// Формуємо messages array для Groq API\nconst messages = rows.map(row => ({\nrole: row.role,\ncontent: row.content\n}));\n\n// Додаємо нове повідомлення користувача\nmessages.push({ role: 'user', content: userText });\n\nreturn [{ json: {\nchatId: chatId,\nuserText: userText,\nmessages: messages\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        144
+      ],
+      "id": "88ee1f45-f8a9-4829-a94f-33a1e5e93c7e",
+      "name": "Format History for AI"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\"model\": \"llama-3.3-70b-versatile\",\n\"messages\": {{ JSON.stringify([{ \"role\": \"system\", \"content\": \"Ти корисний AI-асистент. Відповідай чітко та зрозуміло.\" }, ...$json.messages]) }},\n\"temperature\": 0.7,\n\"max_tokens\": 1024\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        112,
+        144
+      ],
+      "id": "322f4ab8-69b6-499b-bda9-fec9a3522948",
+      "name": "Ask Groq with Memory",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_GROQ_CREDENTIAL_ID",
+          "name": "Groq API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst aiReply = response.choices[0].message.content;\nconst chatId = $('Format History for AI').item.json.chatId;\nconst userText = $('Format History for AI').item.json.userText;\n\nreturn [{ json: {\n  chatId: chatId,\n  userText: userText,\n  aiReply: aiReply\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        144
+      ],
+      "id": "5ff9c22c-f2f1-47cb-8d54-f8dbba65c25a",
+      "name": "Parse AI Response"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AI_Memory_Bot",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": " history",
+          "cachedResultUrl": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ $json.chatId }}",
+            "role": "user",
+            "content": "={{ $json.userText }}",
+            "timestamp": "={{ $now.format('yyyy-MM-dd HH:mm:ss') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "role",
+              "displayName": "role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "content",
+              "displayName": "content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        528,
+        144
+      ],
+      "id": "ef089c04-0c5b-485e-8801-806ae57a1b82",
+      "name": "Save User Message",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AI_Memory_Bot",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": " history",
+          "cachedResultUrl": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ $json.chat_id }}",
+            "role": " assistant",
+            "content": "={{ $('Parse AI Response').item.json.aiReply }}",
+            "timestamp": "={{ $now.format('yyyy-MM-dd HH:mm:ss') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "role",
+              "displayName": "role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "content",
+              "displayName": "content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        720,
+        144
+      ],
+      "id": "dafb1047-a9cf-4f6d-a463-497988dc46c5",
+      "name": "Save AI Response",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse AI Response').item.json.chatId }}",
+        "text": "={{ $('Parse AI Response').item.json.aiReply }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        928,
+        144
+      ],
+      "id": "9ce84159-e689-42a8-a706-fbce3e185c28",
+      "name": "Send Reply  to User",
+      "webhookId": "db1a545d-bbf4-4b01-bdd1-f3c570b073ac",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive User Message": {
+      "main": [
+        [
+          {
+            "node": "Extract Message Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Message Data": {
+      "main": [
+        [
+          {
+            "node": "Check Memory Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Memory Exists": {
+      "main": [
+        [
+          {
+            "node": "Clear Old Memory",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Load Conversation History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Old Memory": {
+      "main": [
+        [
+          {
+            "node": "Delete Typing Indicator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Conversation History": {
+      "main": [
+        [
+          {
+            "node": "Format History for AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format History for AI": {
+      "main": [
+        [
+          {
+            "node": "Ask Groq with Memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask Groq with Memory": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Save User Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save User Message": {
+      "main": [
+        [
+          {
+            "node": "Save AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save AI Response": {
+      "main": [
+        [
+          {
+            "node": "Send Reply  to User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "2a4ab480-f8d8-4838-9e80-f22289c298af",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "LrczbBSyX3osRO2G",
+  "tags": []
+}
