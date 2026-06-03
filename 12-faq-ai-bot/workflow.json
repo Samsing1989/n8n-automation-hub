@@ -1,0 +1,494 @@
+{
+  "name": "WF - 12 FAQ AI Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -288,
+        -16
+      ],
+      "id": "3afe8071-d807-439d-b18b-186bbadeb74e",
+      "name": "Telegram Trigger",
+      "webhookId": "40b83b73-7ac6-4632-a6d9-f800e668a50f",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\"model\": \"llama-3.3-70b-versatile\",\n\"messages\": [\n{\n\"role\": \"system\",\n\"content\": \"You are a helpful assistant for Company X. Answer in the same language as the user (Ukrainian or English). Answer ONLY questions about our products and services. Our business: we sell handmade leather bags. Working hours: Mon-Sat 9:00-18:00. Delivery: 2-5 days Ukraine, 7-14 days international. Payment: card, cash on delivery. Return policy: 14 days. If you don't know the answer or the question is not related to our business, respond ONLY with the word: UNKNOWN. Ви корисний помічник компанії X. Відповідайте тією ж мовою, якою звернувся користувач (українською або англійською). Відповідайте ТІЛЬКИ на запитання про наші продукти та послуги. Наш бізнес: ми продаємо шкіряні сумки ручної роботи. Час роботи: Пн-Сб 9:00-18:00. Доставка: 2-5 днів Україна, 7-14 днів міжнародна. Оплата: картка, післяплата. Політика повернення: 14 днів. Якщо ви не знаєте відповіді або питання не пов'язане з нашим бізнесом, дайте відповідь ТІЛЬКИ словом: НЕВІДОМО\"\n},\n{\n\"role\": \"user\",\n\"content\": {{ JSON.stringify($json.message.text) }}\n}\n],\n\"temperature\": 0.3,\n\"max_tokens\": 500\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -80,
+        -16
+      ],
+      "id": "711077e8-870d-4be8-a855-43c9fb50bafe",
+      "name": "Groq AI Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Fl0Zf3nWcLQNq8Wi",
+          "name": "groq"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "27a97d51-3b8e-4f1c-a0ca-15c0aec008ad",
+              "name": "ai_response",
+              "value": "={{ $json.choices[0].message.content.trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "9d39c5cc-75ec-40d8-9825-6d0a7e201206",
+              "name": "user_question",
+              "value": "={{ $('Telegram Trigger').item.json.message.text }}",
+              "type": "string"
+            },
+            {
+              "id": "220db0c9-5933-4270-bbb1-34469a678216",
+              "name": "chat_id",
+              "value": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+              "type": "number"
+            },
+            {
+              "id": "41a249c6-1774-4c3c-8977-f34f18a25667",
+              "name": "username",
+              "value": "={{ $('Telegram Trigger').item.json.message.from.username }}",
+              "type": "string"
+            },
+            {
+              "id": "f510e52f-08ef-4491-8997-e228c705af69",
+              "name": "timestamp",
+              "value": "={{ new Date().toLocaleString('uk-UA', {timeZone: 'Europe/Kyiv'}) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        128,
+        -16
+      ],
+      "id": "8207971e-e5ed-442f-ac34-6aa094b74f02",
+      "name": "Extract AI Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cef53593-c628-42a7-87c7-11067e9107a6",
+              "leftValue": "={{ $json.ai_response }}",
+              "rightValue": "UNKNOWN",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        336,
+        -16
+      ],
+      "id": "c6ac31a4-1585-4e0d-824a-6d4bb1c78bed",
+      "name": "Check If AI Known"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=🤖 *AI Assistant*  \n{{ $json.ai_response }} \n--- \n_Have more questions? Just ask!_",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        544,
+        -112
+      ],
+      "id": "bb5da055-9506-4723-8811-d0d25b4af182",
+      "name": "Send Answer to User",
+      "webhookId": "0882e736-f13e-4182-951f-a8154318184b",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "FAQ Bot Logs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1snB6EoPQuB5hRGLHFYRAGovUNGwLbPDcUQ5TAmuZuSc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Logs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1snB6EoPQuB5hRGLHFYRAGovUNGwLbPDcUQ5TAmuZuSc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $('Extract AI Response').item.json.timestamp }}",
+            "Username": "={{ $('Extract AI Response').item.json.username }}",
+            "Question": "={{ $('Extract AI Response').item.json.user_question }}",
+            "AI Answer": "={{ $('Extract AI Response').item.json.ai_response }}",
+            "Status": "Answered by AI"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Username",
+              "displayName": "Username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Question",
+              "displayName": "Question",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Answer",
+              "displayName": "AI Answer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        736,
+        -112
+      ],
+      "id": "5f83c7d7-01b1-456f-a0cc-d40c94138eec",
+      "name": "Log to Sheets (Known)",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "=YOUR_CHAT_ID",
+        "text": "=⚠️ *New question requires attention*\n\n👤 From: @{{ $json.username }}\n💬 Question: {{ $json.user_question }}\n\n_AI could not answer this question. Please reply manually._",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        544,
+        64
+      ],
+      "id": "35b5e52f-dc71-4501-b568-3fdafc30f455",
+      "name": "Notify Manager",
+      "webhookId": "0882e736-f13e-4182-951f-a8154318184b",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.result.chat.id }}",
+        "text": "=Thank you for your question! 🙏\n\nOur manager will get back to you shortly. Working hours: Mon-Sat, 9:00-18:00.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        736,
+        64
+      ],
+      "id": "033356c9-5105-49b6-920d-ccf798c996e2",
+      "name": "\"Escalated\" to User",
+      "webhookId": "0882e736-f13e-4182-951f-a8154318184b",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "FAQ Bot Logs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1snB6EoPQuB5hRGLHFYRAGovUNGwLbPDcUQ5TAmuZuSc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Logs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1snB6EoPQuB5hRGLHFYRAGovUNGwLbPDcUQ5TAmuZuSc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $('Extract AI Response').item.json.timestamp }}",
+            "Username": "={{ $('Extract AI Response').item.json.username }}",
+            "Question": "={{ $('Extract AI Response').item.json.user_question }}",
+            "AI Answer": "={{ $('Extract AI Response').item.json.ai_response }}",
+            "Status": "Escalated to Manager"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Username",
+              "displayName": "Username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Question",
+              "displayName": "Question",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Answer",
+              "displayName": "AI Answer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        960,
+        64
+      ],
+      "id": "5b6b299e-3ba0-440c-ad61-f1e372ade775",
+      "name": "Log to Sheets (Escalated)",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Groq AI Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq AI Request": {
+      "main": [
+        [
+          {
+            "node": "Extract AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract AI Response": {
+      "main": [
+        [
+          {
+            "node": "Check If AI Known",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check If AI Known": {
+      "main": [
+        [
+          {
+            "node": "Send Answer to User",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Answer to User": {
+      "main": [
+        [
+          {
+            "node": "Log to Sheets (Known)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Manager": {
+      "main": [
+        [
+          {
+            "node": "\"Escalated\" to User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\"Escalated\" to User": {
+      "main": [
+        [
+          {
+            "node": "Log to Sheets (Escalated)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f7b623ce-a1df-4003-833d-cd4524e8eb18",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "GZBanLL0BjZTxaCK",
+  "tags": []
+}
