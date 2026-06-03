@@ -1,0 +1,176 @@
+{
+  "name": "WF - 10 Uptime Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "minutes" }] }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [-608, -160],
+      "id": "8127fcc8-51a7-4e42-8baa-b6c6153ce33d",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://YOUR_SITE_URL.com",
+        "options": {
+          "response": { "response": { "fullResponse": true, "responseFormat": "text" } }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-416, -160],
+      "id": "9b2d87ce-4d5c-45df-8dff-b69d6870638d",
+      "name": "Check Site",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "documentId": { "__rl": true, "value": "YOUR_SPREADSHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "gid=0", "mode": "list", "cachedResultName": "Sheets" },
+        "filtersUI": { "values": [] },
+        "options": { "returnFirstMatch": true }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-240, -160],
+      "id": "6eb961a1-8638-4c4a-8bbb-4f2212ef4cc5",
+      "name": "Get Last Status",
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GOOGLE_CREDENTIAL_ID", "name": "Google Sheets account" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const httpResult = $('Check Site').item.json;\nconst rows = $input.all();\n\nconst sorted = rows.sort((a, b) => (b.json.row_number || 0) - (a.json.row_number || 0));\nconst lastRow = sorted[0]?.json || {};\nconst previousStatus = lastRow.status || 'ok';\n\nconst currentCode = httpResult.statusCode || 0;\nconst currentStatus = currentCode === 200 ? 'ok' : 'OFFLINE';\n\nconst now = new Date().toISOString();\n\nreturn [{\n  json: {\n    timestamp: now,\n    URL: 'YOUR_SITE_URL.com',\n    status: currentStatus,\n    code: currentCode,\n    previousStatus: previousStatus,\n    isDown: currentStatus === 'OFFLINE',\n    justRecovered: previousStatus === 'OFFLINE' && currentStatus === 'ok'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-64, -160],
+      "id": "dc293d4d-c9de-4927-ae02-34ced7b7ff3d",
+      "name": "Compare Status"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 3 },
+          "conditions": [
+            { "id": "864c34c8", "leftValue": "={{ $json.isDown }}", "rightValue": "true", "operator": { "type": "boolean", "operation": "true", "singleValue": true } }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [96, -160],
+      "id": "30effb1a-ad1e-47d7-b43a-afa0b028fb38",
+      "name": "Is Site Down"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 3 },
+          "conditions": [
+            { "id": "fa1600db", "leftValue": "={{ $json.justRecovered }}", "rightValue": "true", "operator": { "type": "string", "operation": "equals" } }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [400, 144],
+      "id": "f1c5622c-b6c8-40e6-8988-1eb768386c54",
+      "name": "Just Recovered"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=🚨 ALERT: Site is DOWN!\nURL: {{ $json.URL }}\nTime: {{ $json.timestamp }}\nCode: {{ $json.code }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [400, -288],
+      "id": "fc4fa9dc-4167-45d0-b611-cbd2b68decce",
+      "name": "Notify Site Down",
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=✅ RECOVERY: Site is back online!\nURL: {{ $json.URL }}\nTime: {{ $now.toFormat('HH:mm') }}\nCode: {{ $('Check Site').item.json.statusCode ?? 'timeout' }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [400, -80],
+      "id": "99c17277-481f-46c7-a961-33f13f4a875b",
+      "name": "Notify Site Recovered",
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "value": "YOUR_SPREADSHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "gid=0", "mode": "list", "cachedResultName": "Sheets" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $('Check Site').item.json.headers.date }}",
+            "URL": "={{ $('Compare Status').item.json.URL }}",
+            "status": "={{ $('Compare Status').item.json.status }}",
+            "code": "={{ $('Check Site').item.json.statusCode }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "timestamp", "displayName": "timestamp", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "URL", "displayName": "URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "status", "displayName": "status", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "code", "displayName": "code", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [736, -16],
+      "id": "ae720f02-da19-4676-9653-318ae9cf9563",
+      "name": "Log Status",
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GOOGLE_CREDENTIAL_ID", "name": "Google Sheets account" }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": { "main": [[{ "node": "Check Site", "type": "main", "index": 0 }]] },
+    "Check Site": { "main": [[{ "node": "Get Last Status", "type": "main", "index": 0 }]] },
+    "Get Last Status": { "main": [[{ "node": "Compare Status", "type": "main", "index": 0 }]] },
+    "Compare Status": { "main": [[{ "node": "Is Site Down", "type": "main", "index": 0 }]] },
+    "Is Site Down": {
+      "main": [
+        [{ "node": "Notify Site Down", "type": "main", "index": 0 }],
+        [{ "node": "Just Recovered", "type": "main", "index": 0 }]
+      ]
+    },
+    "Just Recovered": {
+      "main": [
+        [{ "node": "Notify Site Recovered", "type": "main", "index": 0 }],
+        [{ "node": "Log Status", "type": "main", "index": 0 }]
+      ]
+    },
+    "Notify Site Down": { "main": [[{ "node": "Log Status", "type": "main", "index": 0 }]] },
+    "Notify Site Recovered": { "main": [[{ "node": "Log Status", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": { "instanceId": "YOUR_INSTANCE_ID" }
+}
