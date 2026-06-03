@@ -32,11 +32,11 @@ Built by **Pavlo Veresiuk** · AI Automation & n8n
 | 08 | [Weather Bot](./08-weather-bot) | Daily weather forecast to Telegram at 7:30 via wttr.in | Schedule · HTTP Request · Telegram |
 | 09 | [Support Bot](./09-support-bot) | Routes client requests by topic, responds automatically | Telegram Trigger · Switch · Telegram |
 | 10 | [Uptime Monitor](./10-uptime-monitor) | Checks site availability every 5 min, alerts on downtime | Schedule · HTTP Request · IF · Telegram |
-| 11 | CRM Auto-fill | New lead from form automatically creates HubSpot contact | Webhook · HTTP Request · HubSpot · Telegram |
-| 12 | News Digest | Daily news collection by topic sent as HTML digest to email | Schedule · HTTP Request · RSS · Gmail |
-| 13 | Onboarding Flow | New CRM client triggers automated 3-email series over 4 days | Webhook · Wait · Gmail · Telegram |
-| 14 | Instagram Leads | Instagram comments with keywords logged to CRM and sent to manager | Webhook · Instagram · IF · Google Sheets |
-| 15 | Order Bot | Telegram bot collects orders step by step, saves to Sheets | Telegram Trigger · IF · Google Sheets |
+| 11 | [CRM Auto-fill](./11-crm-autofill) | New lead from form automatically creates HubSpot contact | Webhook · HTTP Request · HubSpot · Telegram |
+| 12 | [News Digest](./12-faq-ai-bot) | Daily news collection by topic sent as HTML digest to email | Schedule · HTTP Request · RSS · Gmail |
+| 13 | [Onboarding Flow](./13-news-digest) | New CRM client triggers automated 3-email series over 4 days | Webhook · Wait · Gmail · Telegram |
+| 14 | [Instagram Leads](./14-onboarding-flow) | Instagram comments with keywords logged to CRM and sent to manager | Webhook · Instagram · IF · Google Sheets |
+| 15 | [Order Bot](./15-instagram-leads) | Telegram bot collects orders step by step, saves to Sheets | Telegram Trigger · IF · Google Sheets |
 | 16 | Weekly Report | Every Friday auto-generates and sends HTML business metrics report | Schedule · Google Sheets · Code · Gmail |
 | 17 | Error Handler | Error monitoring: logs to Sheets + alerts via Telegram and Gmail | Error Trigger · Google Sheets · Telegram |
 | 18 | Helpdesk | Multi-channel helpdesk: Telegram + email + form in one ticket system | Multiple Triggers · Google Sheets · Telegram |
