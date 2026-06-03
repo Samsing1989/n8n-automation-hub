@@ -1,0 +1,171 @@
+{
+  "name": "WF - 19 Error Assistant",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [-736, 16],
+      "id": "a7de36ee-13a8-42b4-ac38-877f9a867c68",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": { "conditions": [{ "leftValue": "={{ $json.execution.error.message }}", "rightValue": "401|403|unauthorized|auth|forbidden", "operator": { "type": "string", "operation": "regex" } }], "combinator": "and" },
+              "renameOutput": true, "outputKey": "AUTH_ERROR"
+            },
+            {
+              "conditions": { "conditions": [{ "leftValue": "={{ $json.execution.error.message }}", "rightValue": "timeout|ECONNRESET|ETIMEDOUT", "operator": { "type": "string", "operation": "regex" } }], "combinator": "and" },
+              "renameOutput": true, "outputKey": "TIMEOUT"
+            },
+            {
+              "conditions": { "conditions": [{ "leftValue": "={{ $json.execution.error.message }}", "rightValue": "rate limit|429|too many requests", "operator": { "type": "string", "operation": "regex" } }], "combinator": "and" },
+              "renameOutput": true, "outputKey": "RATE_LIMIT"
+            },
+            {
+              "conditions": { "conditions": [{ "leftValue": "={{ $json.execution.error.message }}", "rightValue": "ENOTFOUND|network|connection refused", "operator": { "type": "string", "operation": "regex" } }], "combinator": "and" },
+              "renameOutput": true, "outputKey": "NETWORK"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [-528, -32],
+      "id": "8126afd2-58fa-4c75-bd99-0876784fd1c3",
+      "name": "Classify Error"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a732aac2",
+              "name": "errorType",
+              "value": "={{\n$json.errorOutput === 0 ? '🔴 CRITICAL (AUTH)' :\n$json.errorOutput === 1 ? '🟠 SERIOUS (TIMEOUT)' :\n$json.errorOutput === 2 ? '🟡 WARNING (RATE LIMIT)' :\n$json.errorOutput === 3 ? '🟡 WARNING (NETWORK)' :\n'🔵 INFO'\n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-272, 16],
+      "id": "95ea8496-5972-4d7d-91e4-35092d47f858",
+      "name": "Set Error Type"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "value": "YOUR_SPREADSHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "gid=0", "mode": "list", "cachedResultName": "error" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ new Date().toISOString() }}",
+            "Workflow Name": "={{ $('Error Trigger').item.json.workflow.name }}",
+            "Execution URL": "={{ $('Error Trigger').item.json.execution.url }}",
+            "Execution ID": "={{ $('Error Trigger').item.json.execution.id }}",
+            "Error Message": "={{ $('Error Trigger').item.json.execution.error.message }}",
+            "Node Name": "={{ $('Error Trigger').item.json.execution.lastNodeExecuted }}",
+            "Error Type": "={{ $json.errorType }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "Timestamp", "displayName": "Timestamp", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Workflow Name", "displayName": "Workflow Name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Node Name", "displayName": "Node Name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Error Type", "displayName": "Error Type", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Error Message", "displayName": "Error Message", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Execution ID", "displayName": "Execution ID", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Execution URL", "displayName": "Execution URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-112, 16],
+      "id": "58fef35b-b498-44c8-91cf-da9692c63fb6",
+      "name": "Log to Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GOOGLE_CREDENTIAL_ID", "name": "Google Sheets account" }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=🚨 WORKFLOW ERROR\n\n📌 Workflow: {{ $('Error Trigger').item.json.workflow.name }}\n⚠️ Node: {{ $('Error Trigger').item.json.execution.lastNodeExecuted }}\n❌ Error: {{ $('Error Trigger').item.json.execution.error.message }}\n🕐 Time: {{ new Date().toLocaleString() }}\n🔗 Execution: {{ $('Error Trigger').item.json.execution.url }}",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [64, 16],
+      "id": "4e46d5fc-3121-4090-8e29-da7b58902b6f",
+      "name": "Telegram Alert",
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+          "conditions": [
+            { "id": "50ded6d5", "leftValue": "={{ $('Error Trigger').item.json.execution.error.message }}", "rightValue": "timeout, ECONNRESET, ETIMEDOUT, 401, 403, unauthorized, auth, forbidden, rate limit, 429, ENOTFOUND, network", "operator": { "type": "string", "operation": "contains" } }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [240, 16],
+      "id": "a1ce8010-20bf-425c-94af-245776f8c51c",
+      "name": "Is Critical"
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL",
+        "subject": "=ERROR: {{ $('Error Trigger').item.json.workflow.name }}",
+        "message": "=<h2>Critical error in n8n workflow</h2>\n<p><b>Workflow:</b> {{ $('Error Trigger').item.json.workflow.name }}</p>\n<p><b>Node:</b> {{ $('Error Trigger').item.json.execution.lastNodeExecuted }}</p>\n<p><b>Error:</b> {{ $('Error Trigger').item.json.execution.error.message }}</p>\n<p><b>Time:</b> {{ new Date().toLocaleString() }}</p>\n<p><a href='{{ $('Error Trigger').item.json.execution.url }}'>View execution</a></p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [448, -80],
+      "id": "fb7674df-8abd-469d-856d-2f2c2fc7d2fd",
+      "name": "Critical Alert Email",
+      "credentials": {
+        "gmailOAuth2": { "id": "YOUR_GMAIL_CREDENTIAL_ID", "name": "Gmail account" }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": { "main": [[{ "node": "Classify Error", "type": "main", "index": 0 }]] },
+    "Classify Error": {
+      "main": [
+        [{ "node": "Set Error Type", "type": "main", "index": 0 }],
+        [{ "node": "Set Error Type", "type": "main", "index": 0 }],
+        [{ "node": "Set Error Type", "type": "main", "index": 0 }],
+        [{ "node": "Set Error Type", "type": "main", "index": 0 }],
+        [{ "node": "Set Error Type", "type": "main", "index": 0 }]
+      ]
+    },
+    "Set Error Type": { "main": [[{ "node": "Log to Sheets", "type": "main", "index": 0 }]] },
+    "Log to Sheets": { "main": [[{ "node": "Telegram Alert", "type": "main", "index": 0 }]] },
+    "Telegram Alert": { "main": [[{ "node": "Is Critical", "type": "main", "index": 0 }]] },
+    "Is Critical": { "main": [[{ "node": "Critical Alert Email", "type": "main", "index": 0 }], []] }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": { "instanceId": "YOUR_INSTANCE_ID" }
+}
