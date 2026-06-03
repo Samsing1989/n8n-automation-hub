@@ -1,0 +1,132 @@
+{
+  "name": "WF - 11 CRM Auto-fill",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crm-lead",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-1248, -128],
+      "id": "72562539-7bdf-4e79-8ca4-b7e614c972de",
+      "name": "Receive Lead Form",
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/contacts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"properties\": {\n    \"firstname\": \"{{ $json.body.name }}\",\n    \"email\": \"{{ $json.body.email }}\",\n    \"phone\": \"{{ $json.body.phone }}\",\n    \"company\": \"{{ $json.body.company }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-1056, -128],
+      "id": "da31ba51-3d31-4e24-9314-74ae46964344",
+      "name": "Create HubSpot Contact",
+      "credentials": {
+        "hubspotAppToken": { "id": "YOUR_HUBSPOT_CREDENTIAL_ID", "name": "HubSpot App Token" }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "1acb4fd3", "name": "contact_id", "value": "={{ $json.id }}", "type": "string" },
+            { "id": "e6ded4c4", "name": "contact_url", "value": "=https://app.hubspot.com/contacts/{{ $json.id }}", "type": "string" },
+            { "id": "d2908e03", "name": "name", "value": "={{ $('Receive Lead Form').item.json.body.name }}", "type": "string" },
+            { "id": "e212fc7c", "name": "email", "value": "={{ $('Receive Lead Form').item.json.body.email }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-832, -128],
+      "id": "8707876b-3c96-44ed-9607-796013ed97bb",
+      "name": "Prepare Sheet Data"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "value": "YOUR_SPREADSHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "gid=0", "mode": "list", "cachedResultName": "lead" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.name }}",
+            "Email": "={{ $json.email }}",
+            "Date": "={{ new Date().toLocaleString() }}",
+            "Phone": "={{ $('Receive Lead Form').item.json.body.phone }}",
+            "Company": "={{ $('Receive Lead Form').item.json.body.company }}",
+            "HubSpot ID": "={{ $json.contact_id }}",
+            "HubSpot URL": "={{ $json.contact_url }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "Date", "displayName": "Date", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Name", "displayName": "Name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Email", "displayName": "Email", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Phone", "displayName": "Phone", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Company", "displayName": "Company", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "HubSpot ID", "displayName": "HubSpot ID", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "HubSpot URL", "displayName": "HubSpot URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-624, -128],
+      "id": "8b000de1-abbf-4a64-a45f-ded245cb8b3a",
+      "name": "Save Lead to Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GOOGLE_CREDENTIAL_ID", "name": "Google Sheets account" }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=*New Lead in CRM!*\n\n*Name:* {{ $('Receive Lead Form').item.json.body.name }}\n*Email:* {{ $('Receive Lead Form').item.json.body.email }}\n*Phone:* {{ $('Receive Lead Form').item.json.body.phone }}\n*Company:* {{ $('Receive Lead Form').item.json.body.company }}\n\n*HubSpot ID:* {{ $('Prepare Sheet Data').item.json.contact_id }}\n[Open in HubSpot]({{ $('Prepare Sheet Data').item.json.contact_url }})",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [-432, -128],
+      "id": "11c3e1f1-11ca-4766-8590-8439e493b3ca",
+      "name": "Notify Manager Telegram",
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK: Lead received",
+        "options": { "responseCode": 200 }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [-240, -128],
+      "id": "ad0f19b3-3986-43fc-9a1a-d9af2a093263",
+      "name": "Confirm Lead Received"
+    }
+  ],
+  "connections": {
+    "Receive Lead Form": { "main": [[{ "node": "Create HubSpot Contact", "type": "main", "index": 0 }]] },
+    "Create HubSpot Contact": { "main": [[{ "node": "Prepare Sheet Data", "type": "main", "index": 0 }]] },
+    "Prepare Sheet Data": { "main": [[{ "node": "Save Lead to Sheets", "type": "main", "index": 0 }]] },
+    "Save Lead to Sheets": { "main": [[{ "node": "Notify Manager Telegram", "type": "main", "index": 0 }]] },
+    "Notify Manager Telegram": { "main": [[{ "node": "Confirm Lead Received", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": { "instanceId": "YOUR_INSTANCE_ID" }
+}
