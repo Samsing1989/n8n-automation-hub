@@ -27,11 +27,11 @@ Built by **Pavlo Veresiuk** · AI Automation & n8n
 | 03 | [Daily Morning Digest](./03-morning-digest/) | Every morning sends active tasks from Sheets to Telegram with urgent task detection | Schedule · Google Sheets · Code · Telegram |
 | 04 | [Currency Bot](./04-currency-bot/) | Converts any currency to UAH in real time via Telegram | Telegram Trigger · HTTP Request · Code |
 | 05 | [Lead Validator](./05-lead-validator/) | Advanced lead capture with email validation, HTTP responses, phone + source tracking | Webhook · IF · Google Sheets · Telegram |
-| 06 | Crypto Monitor | Checks BTC price hourly, sends alert if change exceeds 3% | Schedule · HTTP Request · IF · Telegram |
-| 07 | Client Broadcast | Personalized weekly message to clients from Sheets via Telegram | Schedule · Google Sheets · Telegram |
-| 08 | Weather Bot | Daily weather forecast to Telegram at 7:30 via wttr.in | Schedule · HTTP Request · Telegram |
-| 09 | Support Bot | Routes client requests by topic, responds automatically | Telegram Trigger · Switch · Telegram |
-| 10 | Uptime Monitor | Checks site availability every 5 min, alerts on downtime | Schedule · HTTP Request · IF · Telegram |
+| 06 | [Crypto Monitor](./06-crypto-monitor) | Checks BTC price hourly, sends alert if change exceeds 3% | Schedule · HTTP Request · IF · Telegram |
+| 07 | [Client Broadcast](./07-client-broadcast) | Personalized weekly message to clients from Sheets via Telegram | Schedule · Google Sheets · Telegram |
+| 08 | [Weather Bot](./08-weather-bot) | Daily weather forecast to Telegram at 7:30 via wttr.in | Schedule · HTTP Request · Telegram |
+| 09 | [Support Bot](./09-support-bot) | Routes client requests by topic, responds automatically | Telegram Trigger · Switch · Telegram |
+| 10 | [Uptime Monitor](./10-uptime-monitor) | Checks site availability every 5 min, alerts on downtime | Schedule · HTTP Request · IF · Telegram |
 | 11 | CRM Auto-fill | New lead from form automatically creates HubSpot contact | Webhook · HTTP Request · HubSpot · Telegram |
 | 12 | News Digest | Daily news collection by topic sent as HTML digest to email | Schedule · HTTP Request · RSS · Gmail |
 | 13 | Onboarding Flow | New CRM client triggers automated 3-email series over 4 days | Webhook · Wait · Gmail · Telegram |
