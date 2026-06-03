@@ -1,0 +1,131 @@
+{
+  "name": "WF - 15 Instagram Leads",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "instagram-comments",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-416, 0],
+      "id": "c926548d-6f06-4231-88a3-e734586469c6",
+      "name": "Instagram Webhook",
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+          "conditions": [
+            { "id": "d6c54e03", "leftValue": "={{ $json.body.entry[0].changes[0].value.message.toLowerCase() }}", "rightValue": "price", "operator": { "type": "string", "operation": "contains" } },
+            { "id": "02058ff1", "leftValue": "={{ $json.body.entry[0].changes[0].value.message.toLowerCase() }}", "rightValue": "buy", "operator": { "type": "string", "operation": "contains" } },
+            { "id": "26ac5011", "leftValue": "={{ $json.body.entry[0].changes[0].value.message.toLowerCase() }}", "rightValue": "order", "operator": { "type": "string", "operation": "contains" } },
+            { "id": "1bdb506f", "leftValue": "={{ $json.body.entry[0].changes[0].value.message.toLowerCase() }}", "rightValue": "how much", "operator": { "type": "string", "operation": "contains" } }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-208, 0],
+      "id": "9e1303b4-5b14-4546-8646-392a7c9664e8",
+      "name": "Check Keywords"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "value": "YOUR_SPREADSHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "gid=0", "mode": "list", "cachedResultName": "Leads" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ new Date().toISOString() }}",
+            "Username": "={{ $('Instagram Webhook').item.json.body.entry[0].changes[0].value.from.name }}",
+            "Comment": "={{ $('Instagram Webhook').item.json.body.entry[0].changes[0].value.message }}",
+            "Type": "Lead",
+            "Processed": "No"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "Timestamp", "displayName": "Timestamp", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Username", "displayName": "Username", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Comment", "displayName": "Comment", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Type", "displayName": "Type", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Processed", "displayName": "Processed", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [0, -96],
+      "id": "1a8d2a81-f07c-49ae-8ab0-1caf56c8d631",
+      "name": "Save Lead to Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GOOGLE_CREDENTIAL_ID", "name": "Google Sheets account" }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL",
+        "subject": "=New Instagram Lead — {{ $('Instagram Webhook').item.json.body.entry[0].changes[0].value.from.name }}",
+        "message": "=<h2>New potential client!</h2>\n<p><b>User:</b> {{ $('Instagram Webhook').item.json.body.entry[0].changes[0].value.from.name }}</p>\n<p><b>Comment:</b> {{ $('Instagram Webhook').item.json.body.entry[0].changes[0].value.message }}</p>\n<p><b>Time:</b> {{ new Date().toLocaleString() }}</p>",
+        "options": { "appendAttribution": false }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [208, -96],
+      "id": "ea0c8870-d1e2-4899-bfa4-c4818373726a",
+      "name": "Notify Manager by Email",
+      "credentials": {
+        "gmailOAuth2": { "id": "YOUR_GMAIL_CREDENTIAL_ID", "name": "Gmail account" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "value": "YOUR_SPREADSHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "1107059152", "mode": "list", "cachedResultName": "All Comments" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ new Date().toISOString() }}",
+            "Username": "={{ $json.body.entry[0].changes[0].value.from.name }}",
+            "Comment": "={{ $json.body.entry[0].changes[0].value.message }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "Timestamp", "displayName": "Timestamp", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Username", "displayName": "Username", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Comment", "displayName": "Comment", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [0, 96],
+      "id": "93b6a37c-93b2-4f4e-9dd1-39f7bcff2cb8",
+      "name": "Log All Comments",
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GOOGLE_CREDENTIAL_ID", "name": "Google Sheets account" }
+      }
+    }
+  ],
+  "connections": {
+    "Instagram Webhook": { "main": [[{ "node": "Check Keywords", "type": "main", "index": 0 }]] },
+    "Check Keywords": {
+      "main": [
+        [{ "node": "Save Lead to Sheets", "type": "main", "index": 0 }],
+        [{ "node": "Log All Comments", "type": "main", "index": 0 }]
+      ]
+    },
+    "Save Lead to Sheets": { "main": [[{ "node": "Notify Manager by Email", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": { "instanceId": "YOUR_INSTANCE_ID" }
+}
