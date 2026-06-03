@@ -37,7 +37,7 @@ Built by **Pavlo Veresiuk** · AI Automation & n8n
 | 13 | [Onboarding Flow](./13-news-digest) | New CRM client triggers automated 3-email series over 4 days | Webhook · Wait · Gmail · Telegram |
 | 14 | [Instagram Leads](./14-onboarding-flow) | Instagram comments with keywords logged to CRM and sent to manager | Webhook · Instagram · IF · Google Sheets |
 | 15 | [Order Bot](./15-instagram-leads) | Telegram bot collects orders step by step, saves to Sheets | Telegram Trigger · IF · Google Sheets |
-| 16 | Weekly Report | Every Friday auto-generates and sends HTML business metrics report | Schedule · Google Sheets · Code · Gmail |
+| 16 | [Weekly Report] | Every Friday auto-generates and sends HTML business metrics report | Schedule · Google Sheets · Code · Gmail |
 | 17 | Error Handler | Error monitoring: logs to Sheets + alerts via Telegram and Gmail | Error Trigger · Google Sheets · Telegram |
 | 18 | Helpdesk | Multi-channel helpdesk: Telegram + email + form in one ticket system | Multiple Triggers · Google Sheets · Telegram |
 | 19 | QA Feedback Bot | After delivery auto-collects client feedback, escalates low scores | Webhook · Wait · Telegram · IF · Google Sheets |
