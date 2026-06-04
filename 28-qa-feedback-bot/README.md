@@ -1,4 +1,4 @@
-# 26 — QA Feedback Bot
+# 28 — QA Feedback Bot
 
 After a delivery, automatically sends a feedback request to the client, waits for their rating, logs the score to Google Sheets, and escalates low scores to the manager via Telegram and email.
 
