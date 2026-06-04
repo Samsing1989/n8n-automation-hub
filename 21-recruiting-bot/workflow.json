@@ -1,0 +1,168 @@
+{
+  "name": "WF - 21 Recruiting Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": { "item": [{ "mode": "everyMinute" }] },
+        "filters": { "q": "\"Resume\"" }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [-752, 16],
+      "id": "b711b86e-0092-440b-8049-5c69ac5864d9",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": { "id": "YOUR_GMAIL_CREDENTIAL_ID", "name": "Gmail account" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst message = items[0].json;\n\nconst fromRaw = message.From || message.from || '';\n\nconst emailMatch = fromRaw.match(/<([^>]+)>/);\nconst senderEmail = emailMatch ? emailMatch[1] : fromRaw.trim();\n\nconst nameMatch = fromRaw.match(/^\"(.+?)\"/);\nconst senderName = nameMatch ? nameMatch[1] : 'Unknown';\n\nlet bodyText = message.text || message.snippet || '';\nif (message.html && !bodyText) {\n  bodyText = message.html.replace(/<[^>]+>/g, ' ').trim();\n}\n\nreturn [{ json: { senderName, senderEmail, bodyText: bodyText.slice(0, 3000) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-544, 16],
+      "id": "03f42612-1dd5-4de7-a97f-248eb03e7d6c",
+      "name": "Extract Resume Text"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"temperature\": 0.3,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an HR assistant. Reply ONLY with valid JSON, no explanations.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Score this candidate resume on a scale of 1-10.\\nCriteria: experience (40%), skills (30%), education (20%), clarity (10%).\\nReturn JSON: {\\\"score\\\": number, \\\"comment\\\": \\\"string max 200 chars\\\", \\\"name\\\": \\\"{{ $json.senderName }}\\\", \\\"email\\\": \\\"{{ $json.senderEmail }}\\\"}\\n\\nResume:\\n{{ $json.bodyText }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-336, 16],
+      "id": "0d986a1d-c5e7-42ff-8c87-d08a75bad785",
+      "name": "Analyze Resume Groq",
+      "credentials": {
+        "httpHeaderAuth": { "id": "YOUR_GROQ_CREDENTIAL_ID", "name": "Groq API" }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "fd15e199", "name": "score", "value": "={{ JSON.parse($json.choices[0].message.content).score }}", "type": "string" },
+            { "id": "82e635c5", "name": "comment", "value": "={{ JSON.parse($json.choices[0].message.content).comment }}", "type": "string" },
+            { "id": "26d0dae5", "name": "candidateName", "value": "={{ $('Extract Resume Text').item.json.senderName }}", "type": "string" },
+            { "id": "45f62278", "name": "candidateEmail", "value": "={{ $('Extract Resume Text').item.json.senderEmail }}", "type": "string" },
+            { "id": "173f8d36", "name": "content", "value": "={{ $json.choices[0].message.content }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-128, 16],
+      "id": "32fb92bb-d71e-4d2c-96b8-765d548e636c",
+      "name": "Prepare Candidate Score"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "value": "YOUR_SPREADSHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "gid=0", "mode": "list", "cachedResultName": "Candidates" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ new Date().toLocaleDateString() }}",
+            "Name": "={{ $json.candidateName }}",
+            "Email": "={{ $json.candidateEmail }}",
+            "Score": "={{ $json.score }}",
+            "AI Comment": "={{ $json.comment }}",
+            "Status": "New"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "Date", "displayName": "Date", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Name", "displayName": "Name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Email", "displayName": "Email", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Score", "displayName": "Score", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "AI Comment", "displayName": "AI Comment", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Status", "displayName": "Status", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [80, 16],
+      "id": "74a61906-22c2-4cd5-b697-a1fbb252286b",
+      "name": "Save Score to Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GOOGLE_CREDENTIAL_ID", "name": "Google Sheets account" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 3 },
+          "conditions": [
+            { "id": "8fdab10f", "leftValue": "={{ $('Prepare Candidate Score').item.json.score }}", "rightValue": 7, "operator": { "type": "number", "operation": "gte" } }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [288, 16],
+      "id": "2a560b9a-1d7a-4a39-ad8d-09e00983c9ec",
+      "name": "Check Score Threshold"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=🔔 *New candidate — recommended for interview!*\n👤 *Name:* {{ $('Prepare Candidate Score').item.json.candidateName }}\n📧 *Email:* {{ $('Prepare Candidate Score').item.json.candidateEmail }}\n⭐ *AI Score:* {{ $('Prepare Candidate Score').item.json.score }}/10\n💬 *AI Comment:* {{ $('Prepare Candidate Score').item.json.comment }}\n✅ Passed automatic filter (7+). Recommended for interview.",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [496, -128],
+      "id": "e9475c7c-c2be-4d7c-95f9-0a189ec4a5e8",
+      "name": "Notify HR High Score",
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=❌ Candidate not recommended.\nName: {{ $('Prepare Candidate Score').item.json.candidateName }}\nEmail: {{ $('Prepare Candidate Score').item.json.candidateEmail }}\nAI Score: {{ $('Prepare Candidate Score').item.json.score }}/10\nAI Comment: {{ $('Prepare Candidate Score').item.json.comment }}",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [496, 96],
+      "id": "448e2618-c125-4c64-9492-29197cad03dc",
+      "name": "Notify HR Low Score",
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" }
+      }
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": { "main": [[{ "node": "Extract Resume Text", "type": "main", "index": 0 }]] },
+    "Extract Resume Text": { "main": [[{ "node": "Analyze Resume Groq", "type": "main", "index": 0 }]] },
+    "Analyze Resume Groq": { "main": [[{ "node": "Prepare Candidate Score", "type": "main", "index": 0 }]] },
+    "Prepare Candidate Score": { "main": [[{ "node": "Save Score to Sheets", "type": "main", "index": 0 }]] },
+    "Save Score to Sheets": { "main": [[{ "node": "Check Score Threshold", "type": "main", "index": 0 }]] },
+    "Check Score Threshold": {
+      "main": [
+        [{ "node": "Notify HR High Score", "type": "main", "index": 0 }],
+        [{ "node": "Notify HR Low Score", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": { "instanceId": "YOUR_INSTANCE_ID" }
+}
