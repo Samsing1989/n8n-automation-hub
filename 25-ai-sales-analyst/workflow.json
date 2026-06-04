@@ -1,0 +1,390 @@
+{
+  "name": "WF - 25 AI Sales Analyst",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -656,
+        0
+      ],
+      "id": "57e38323-9289-436e-8e53-3ab78bd738e8",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\"model\": \"llama-3.3-70b-versatile\",\n\"messages\": [\n{\n\"role\": \"system\",\n\"content\": \"Ти досвідчений бізнес-аналітик. Аналізуй дані продажів і давай 3 конкретні рекомендації для збільшення виручки. Відповідай чітко і по суті.\"\n},\n{\n\"role\": \"user\",\n\"content\": \"={{ $json.report_text.replace(/\\\\n/g, ' ') }}\"\n}\n],\n\"temperature\": 0.7,\n\"max_tokens\": 1024\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -32,
+        0
+      ],
+      "id": "c303a206-32cc-4daf-8d1f-39061990c548",
+      "name": "Groq AI Analysis",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_GROQ_CREDENTIAL_ID",
+          "name": "Groq API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst rows = items.map(i => i.json);\n\n// Загальна виручка\nconst totalRevenue = rows.reduce((sum, r) => sum + parseFloat(r.total_eur || 0), 0);\n\n// Групування по продуктах\nconst byProduct = {};\nrows.forEach(r => {\nconst name = r.product_name || 'Unknown';\nif (!byProduct[name]) byProduct[name] = { revenue: 0, qty: 0 };\nbyProduct[name].revenue += parseFloat(r.total_eur || 0);\nbyProduct[name].qty += parseInt(r.quantity || 0);\n});\n\n// Сортування\nconst sorted = Object.entries(byProduct)\n.map(([name, data]) => ({ name, ...data }))\n.sort((a, b) => b.revenue - a.revenue);\n\nconst top3 = sorted.slice(0, 3);\nconst bottom3 = sorted.slice(-3).reverse();\n\nconst today = new Date();\nconst weekStart = new Date(today);\nweekStart.setDate(today.getDate() - 7);\nconst fmt = d => d.toISOString().split('T')[0];\n\nconst topList = top3.map(p => p.name + ' (' + p.revenue.toFixed(2) + ' EUR)').join(', ');\nconst bottomList = bottom3.map(p => p.name + ' (' + p.revenue.toFixed(2) + ' EUR)').join(', ');\n\nconst report_text = 'Тижневий звіт (' + fmt(weekStart) + ' — ' + fmt(today) + '). ' +\n'Загальна виручка: ' + totalRevenue.toFixed(2) + ' EUR. ' +\n'Кількість замовлень: ' + rows.length + '. ' +\n'ТОП-3 продукти: ' + topList + '. ' +\n'Аутсайдери: ' + bottomList + '.';\n\nreturn [{\njson: {\ntotal_revenue: totalRevenue.toFixed(2),\ntop3,\nbottom3,\nweek_start: fmt(weekStart),\nweek_end: fmt(today),\ntotal_orders: rows.length,\ntop_product: top3[0]?.name || 'N/A',\nreport_text\n}\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        0
+      ],
+      "id": "d4254932-01e4-4e01-8c4c-3f057c04ee5c",
+      "name": "Aggregate Sales Data"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Ai agent",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sales ",
+          "cachedResultUrl": ""
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -448,
+        0
+      ],
+      "id": "faa165fd-45a0-4412-954e-ab72bdd3ae0d",
+      "name": "Get Sales Last 7 Days",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b846f69f-5fa1-48da-b541-ab1dd753d0f2",
+              "name": "ai_recommendations",
+              "value": "={{ $json.choices[0].message.content }}",
+              "type": "string"
+            },
+            {
+              "id": "fedd40d0-4076-4323-b3af-a09d72bab6ad",
+              "name": "generated_at",
+              "value": "={{ $now.toFormat(\"yyyy-MM-dd HH:mm\") }}",
+              "type": "string"
+            },
+            {
+              "id": "72012c05-9851-4972-b218-3d6017600ff1",
+              "name": "week_summary",
+              "value": "={{ $(\"Aggregate Sales Data\").item.json.report_text }}",
+              "type": "string"
+            },
+            {
+              "id": "9d9c7650-9cea-44bf-a668-20c799ebb712",
+              "name": "total_revenue",
+              "value": "={{ $(\"Aggregate Sales Data\").item.json.total_revenue }} ",
+              "type": "string"
+            },
+            {
+              "id": "d6148f13-b958-4110-bb09-938b54ec4cb5",
+              "name": "total_orders",
+              "value": "={{ $(\"Aggregate Sales Data\").item.json.total_orders }}",
+              "type": "string"
+            },
+            {
+              "id": "b8b22c25-f587-4460-9315-1788d701fa8d",
+              "name": "top_product",
+              "value": "={{ $(\"Aggregate Sales Data\").item.json.top_product }}",
+              "type": "string"
+            },
+            {
+              "id": "d158ff4b-17b2-4346-81c4-d93d5c31e891",
+              "name": "top3",
+              "value": "={{ $(\"Aggregate Sales Data\").item.json.top3 }}",
+              "type": "array"
+            },
+            {
+              "id": "3fb59da6-c8fe-4363-a27f-25eae6ada128",
+              "name": "week_start",
+              "value": "={{ $(\"Aggregate Sales Data\").item.json.week_start }}",
+              "type": "string"
+            },
+            {
+              "id": "c3c0d359-be23-4ca0-9732-ec95c7b07f7b",
+              "name": "week_end",
+              "value": "={{ $(\"Aggregate Sales Data\").item.json.week_end }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        176,
+        0
+      ],
+      "id": "e4885c5c-eeac-4ea2-abf6-741034df3e5b",
+      "name": "Build Report Data"
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL",
+        "subject": "=Тижневий AI-звіт продажів | {{ $json.week_start }} — {{ $json.week_end }}",
+        "message": "=<html><body style=\"font-family:Arial,sans-serif;max-width:700px;margin:0 auto\">\n<h2 style=\"color:#1B4F72\">📊 Тижневий звіт продажів</h2>\n<p style=\"color:#555\">{{ $json.week_start }} — {{ $json.week_end }}</p>\n\n<table style=\"width:100%;border-collapse:collapse;margin:20px 0\">\n<tr style=\"background:#1B4F72;color:white\">\n<th style=\"padding:10px;text-align:left\">Метрика</th>\n<th style=\"padding:10px;text-align:right\">Значення</th>\n</tr>\n<tr>\n<td style=\"padding:8px;border:1px solid #ddd\">🌍 Загальна виручка</td>\n<td style=\"padding:8px;border:1px solid #ddd;text-align:right\">€{{ $json.total_revenue }}</td>\n</tr>\n<tr style=\"background:#f9f9f9\">\n<td style=\"padding:8px;border:1px solid #ddd\">🛒 Кількість замовлень</td>\n<td style=\"padding:8px;border:1px solid #ddd;text-align:right\">{{ $json.total_orders }}</td>\n</tr>\n<tr>\n<td style=\"padding:8px;border:1px solid #ddd\">🏆 Топ продукт</td>\n<td style=\"padding:8px;border:1px solid #ddd;text-align:right\">{{ $json.top_product }}</td>\n</tr>\n</table>\n\n<h3 style=\"color:#1B4F72\">🏆 ТОП-3 продукти</h3>\n<table style=\"width:100%;border-collapse:collapse\">\n<tr style=\"background:#2E86C1;color:white\">\n<th style=\"padding:8px\">Продукт</th>\n<th style=\"padding:8px;text-align:right\">Виручка</th>\n<th style=\"padding:8px;text-align:right\">Кількість</th>\n</tr>\n<tr style=\"background:#f9f9f9\">\n<td style=\"padding:8px;border:1px solid #ddd\">{{ $json.top3[0]?.name || '-' }}</td>\n<td style=\"padding:8px;border:1px solid #ddd;text-align:right\">€{{ $json.top3[0]?.revenue?.toFixed(2) || '0.00' }}</td>\n<td style=\"padding:8px;border:1px solid #ddd;text-align:right\">{{ $json.top3[0]?.qty || 0 }}</td>\n</tr>\n<tr>\n<td style=\"padding:8px;border:1px solid #ddd\">{{ $json.top3[1]?.name || '-' }}</td>\n<td style=\"padding:8px;border:1px solid #ddd;text-align:right\">€{{ $json.top3[1]?.revenue?.toFixed(2) || '0.00' }}</td>\n<td style=\"padding:8px;border:1px solid #ddd;text-align:right\">{{ $json.top3[1]?.qty || 0 }}</td>\n</tr>\n<tr style=\"background:#f9f9f9\">\n<td style=\"padding:8px;border:1px solid #ddd\">{{ $json.top3[2]?.name || '-' }}</td>\n<td style=\"padding:8px;border:1px solid #ddd;text-align:right\">€{{ $json.top3[2]?.revenue?.toFixed(2) || '0.00' }}</td>\n<td style=\"padding:8px;border:1px solid #ddd;text-align:right\">{{ $json.top3[2]?.qty || 0 }}</td>\n</tr>\n</table>\n\n<h3 style=\"color:#1E8449\">🤖 AI Рекомендації</h3>\n<div style=\"background:#f0f8f0;padding:15px;border-left:4px solid #1E8449;border-radius:4px\">\n<pre style=\"white-space:pre-wrap;font-family:Arial\">{{ $json.ai_recommendations }}</pre>\n</div>\n\n<p style=\"color:#888;font-size:12px;margin-top:30px\">\nЗгенеровано автоматично: {{ $json.generated_at }} | n8n Automation\n</p>\n</body></html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        384,
+        0
+      ],
+      "id": "345de90e-a952-4286-8328-8e29f97ba0ad",
+      "name": "Send Weekly Report Email",
+      "webhookId": "c64ba867-ad94-4342-a544-bce2d08c6e81",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Ai agent",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1672392301,
+          "mode": "list",
+          "cachedResultName": "Analysis Log",
+          "cachedResultUrl": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "week_start": "={{ $('Build Report Data').item.json.week_start }}",
+            "week_end": "={{ $('Build Report Data').item.json.week_end }}",
+            "total_revenue": "={{ $('Build Report Data').item.json.total_revenue }}",
+            "top_product": "={{ $('Build Report Data').item.json.top_product }}",
+            "ai_summary": "={{ $('Build Report Data').item.json.ai_recommendations }}",
+            "total_orders": "={{ $('Build Report Data').item.json.total_orders }}",
+            "generated_at": "={{ $('Build Report Data').item.json.generated_at }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "week_start",
+              "displayName": "week_start",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "week_end",
+              "displayName": "week_end",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_revenue",
+              "displayName": "total_revenue",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "top_product",
+              "displayName": "top_product",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_summary",
+              "displayName": "ai_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_orders",
+              "displayName": "total_orders",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "generated_at",
+              "displayName": "generated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        592,
+        0
+      ],
+      "id": "3ff93c64-2740-45f8-8a91-0ddf92083402",
+      "name": "Archive Analysis Log",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Sales Last 7 Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq AI Analysis": {
+      "main": [
+        [
+          {
+            "node": "Build Report Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Sales Data": {
+      "main": [
+        [
+          {
+            "node": "Groq AI Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Sales Last 7 Days": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Sales Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Report Data": {
+      "main": [
+        [
+          {
+            "node": "Send Weekly Report Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Weekly Report Email": {
+      "main": [
+        [
+          {
+            "node": "Archive Analysis Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Archive Analysis Log": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "6b09a0a8-a3ed-4fcb-b9b2-25d3664ccfe5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "PhMD4fGcVddWuUTk",
+  "tags": []
+}
