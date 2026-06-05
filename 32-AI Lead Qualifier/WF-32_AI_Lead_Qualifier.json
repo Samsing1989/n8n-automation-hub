@@ -1,0 +1,1152 @@
+{
+  "name": "WF - 32 AI Lead Qualifier",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agency-lead",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1872,
+        32
+      ],
+      "id": "f64a3b7b-88c0-461e-865e-27457a529deb",
+      "name": "Webhook",
+      "webhookId": "bf9f9b20-dcb1-4365-a304-343a3ce0a550"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5c85c248-eef9-45ee-8e37-082e11a0aba3",
+              "name": "lead_id ",
+              "value": "={{ $now.toMillis() }}",
+              "type": "string"
+            },
+            {
+              "id": "a37e77e0-dfc1-47ac-8eca-a371acb6fabc",
+              "name": "timestamp ",
+              "value": "={{ $now.toISO()}} ",
+              "type": "string"
+            },
+            {
+              "id": "dd13d142-89ba-4b4c-98bc-d41ba27ecfbb",
+              "name": "name",
+              "value": "={{ $json.body.name }}",
+              "type": "string"
+            },
+            {
+              "id": "bc599587-bfa0-412e-ae5f-aff805d3cf97",
+              "name": "email",
+              "value": "={{ $json.body.email }}",
+              "type": "string"
+            },
+            {
+              "id": "2ce7c380-0ef9-4eb0-8e39-b94cd55a5b48",
+              "name": "budget",
+              "value": "={{ $json.body.budget }}",
+              "type": "string"
+            },
+            {
+              "id": "e8987a75-2596-412d-ae0d-d863399b83f3",
+              "name": "deadline",
+              "value": "={{ $json.body.deadline }}",
+              "type": "string"
+            },
+            {
+              "id": "2b1b2734-4e99-41e3-8bdd-11070428d132",
+              "name": "project_type",
+              "value": "={{ $json.body.project_type }}",
+              "type": "string"
+            },
+            {
+              "id": "de6e52e1-f182-446b-995b-1980d961d521",
+              "name": "message",
+              "value": "={{ $json.body.message }}",
+              "type": "string"
+            },
+            {
+              "id": "7dd03478-87c6-47f8-b53e-4975a9a6e189",
+              "name": "status",
+              "value": "new",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1664,
+        32
+      ],
+      "id": "518d1889-c780-4031-81b0-bed858dc9183",
+      "name": "Prepare Lead Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "90fbe0f5-7c99-4e96-9208-b7112476ca31",
+              "leftValue": "={{ $('Parse Groq Response').item.json.score }}",
+              "rightValue": 7,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -288,
+        32
+      ],
+      "id": "206f4207-447f-4654-90fc-95ebd6302191",
+      "name": "Is Hot Lead"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🔥 *Гарячий лід отримав 3 листи!*  \n👤 Ім'я: {{ $('Parse Groq Response').item.json.name }}\n📧 Email: {{ $('Parse Groq Response').item.json.email }}\n💰 Бюджет: {{ $('Parse Groq Response').item.json.budget }}\n📅 Дедлайн: {{ $('Parse Groq Response').item.json.deadline }}\n🎯 Проект: {{ $('Parse Groq Response').item.json.project_type }}\n⭐ Оцінка AI: {{ $('Parse Groq Response').item.json.score }}/10 \n💬 AI коментар: {{ $('Parse Groq Response').item.json.ai_comment }}\nЗателефонуй і призначай зустріч! 📞",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        -80
+      ],
+      "id": "536ea03c-fdf3-4d8f-9da3-7b7fa5ff37f3",
+      "name": "Send a text message",
+      "webhookId": "a07697fd-88a4-490e-bb30-48c39b14f027",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Pavlo bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Agency CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp ": "={{ $json['timestamp '] }}",
+            "lead_id": "={{ $json['lead_id '] }}",
+            "name": "={{ $json.name }}",
+            "email": "={{ $json.email }}",
+            "budget": "={{ $json.budget }}",
+            "deadline": "={{ $json.deadline }}",
+            "project_type": "={{ $json.project_type }}",
+            "status": "={{ $json.status }}"
+          },
+          "matchingColumns": [
+            "lead_id"
+          ],
+          "schema": [
+            {
+              "id": "timestamp ",
+              "displayName": "timestamp ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "budget",
+              "displayName": "budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "deadline",
+              "displayName": "deadline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "project_type",
+              "displayName": "project_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "score",
+              "displayName": "score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_comment",
+              "displayName": "ai_comment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "envelope_id",
+              "displayName": "envelope_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "signed_date",
+              "displayName": "signed_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1456,
+        32
+      ],
+      "id": "b6c7507f-bd76-4bd3-ba9b-bfd0baa6215b",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"lead_id\": \"{{ $('Is Hot Lead').item.json.lead_id }}\",\n  \"score\":   \"{{ $('Is Hot Lead').item.json.score }}\",\n  \"status\":  \"received\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1072,
+        -80
+      ],
+      "id": "3917e52e-a73d-4b20-af7f-28e57585918d",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"lead_id\": \"{{ $('Is Hot Lead').item.json.lead_id }}\",\n  \"score\":   \"{{ $('Is Hot Lead').item.json.score }}\",\n  \"status\":  \"received\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        352,
+        160
+      ],
+      "id": "89cbbcc8-ff53-4be1-a045-ab6bc2e2d41f",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"max_tokens\": 300,\n  \"response_format\": { \"type\": \"json_object\" },\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a lead qualification expert for an n8n automation agency. Evaluate the lead and return ONLY valid JSON: { \\\"score\\\": <0-10>, \\\"priority\\\": \\\"hot|warm|cold\\\", \\\"comment\\\": \\\"<50 words>\\\" }. Score criteria: budget fit (0-2), timeline (0-2), project clarity (0-2), service match (0-2), growth potential (0-2).\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Name: {{ $json.name }}\\nBudget: {{ $json.budget }}\\nDeadline: {{ $json.deadline }}\\nProject: {{ $json.project_type }}\\nMessage: {{ $('Prepare Lead Data').item.json.message }}\"\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1248,
+        32
+      ],
+      "id": "ffe84992-2cb9-4d1d-8f88-02a10e4cce56",
+      "name": "Groq: Qualify Lead",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "groq"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst parsed = JSON.parse(raw);\nconst prev = $('Prepare Lead Data').item.json;\n\nreturn [{\n  json: {\n    ...prev,\n    score:      parsed.score,\n    priority:   parsed.priority,\n    ai_comment: parsed.comment\n  }\n}];\n;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1072,
+        32
+      ],
+      "id": "3503a201-9dd5-42a2-b53e-ac88a021abc7",
+      "name": "Parse Groq Response"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Agency CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "'qualified'",
+            "lead_id": "={{ $json['lead_id '] }}",
+            "score": "={{ $json.score }}",
+            "priority": "={{ $json.priority }}",
+            "ai_comment": "={{ $json.ai_comment }}"
+          },
+          "matchingColumns": [
+            "lead_id"
+          ],
+          "schema": [
+            {
+              "id": "timestamp ",
+              "displayName": "timestamp ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "budget",
+              "displayName": "budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "deadline",
+              "displayName": "deadline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "project_type",
+              "displayName": "project_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "score",
+              "displayName": "score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_comment",
+              "displayName": "ai_comment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "envelope_id",
+              "displayName": "envelope_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "signed_date",
+              "displayName": "signed_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -896,
+        32
+      ],
+      "id": "d269b082-6e99-4733-9d3f-a996cfae9c7b",
+      "name": "Sheets: Update Score",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/contacts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"properties\": {\n    \"email\":     \"{{ $('Parse Groq Response').item.json.email }}\",\n    \"firstname\": \"{{ $('Parse Groq Response').item.json.name.split(' ')[0] }}\",\n    \"lastname\":  \"{{ $('Parse Groq Response').item.json.name.split(' ')[1] ?? ' '}}\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -688,
+        32
+      ],
+      "id": "3295b795-5f16-4a6a-a252-62111e33d55f",
+      "name": "HubSpot: Create Contact",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "hubspot"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Parse Groq Response').item.json.email }}",
+        "subject": "=Вітаємо, {{ $('Parse Groq Response').item.json.name }}! Ваш запит отримано ",
+        "message": "=<h2>Вітаємо, {{ $('Parse Groq Response').item.json.name }}!</h2>\n<p>Дякуємо за ваш запит щодо <b>{{ $('Parse Groq Response').item.json.project_type }}</b>.</p>\n<p>Ми спеціалізуємось на автоматизації бізнес-процесів через n8n.\nВаш проект виглядає цікаво, і ми вже починаємо його аналізувати.</p>\n<p>Протягом 24 годин надішлемо вам конкретні ідеї та приклади.</p>\n<p>З повагою,<br>Команда автоматизації</p>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -64,
+        -80
+      ],
+      "id": "5d5585b7-c9d0-43c0-ab60-1c7f7ac2b11d",
+      "name": "Gmail: Email 1 — Welcome",
+      "webhookId": "5eee2785-6807-4bd2-928d-c2bfa940152b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lwzxWGQhFbTyDBWS",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        144,
+        -80
+      ],
+      "id": "d7b15e41-5322-43ad-8aff-f3b9771b10a2",
+      "name": "Amount: 1, Unit: Days",
+      "webhookId": "34b643e6-22d5-4c3c-b0e2-0857832058b5"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Parse Groq Response').item.json.email }}",
+        "subject": "=Ось що ми зробили для схожих клієнтів",
+        "message": "=<h2>Реальні результати нашої автоматизації</h2>\n<p>Для магазину подібного до вашого ми автоматизували:</p>\n<ul>\n  <li>Обробку замовлень — скорочення ручної роботи на 80%</li>\n  <li>Синхронізацію складу — нульові помилки при оновленні</li>\n  <li>Email-нотифікації — кастомізовані для кожного клієнта</li>\n</ul>\n<p>Ваш бюджет {{ $('Parse Groq Response').item.json.budget }} дозволяє зробити повноцінне рішення.</p>\n<p>Готові обговорити деталі? Відповідь на цей лист — і ми зв'яжемось.</p>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        304,
+        -80
+      ],
+      "id": "5af45348-da04-4a13-af01-f8956f3f02ca",
+      "name": "Gmail: Email 1 — Welcome1",
+      "webhookId": "5eee2785-6807-4bd2-928d-c2bfa940152b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lwzxWGQhFbTyDBWS",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        -80
+      ],
+      "id": "b29f5c9c-c34e-4b05-9e8d-8ccc1658fbd5",
+      "name": "Amount: 1, Unit: Days1",
+      "webhookId": "da0b279d-58d4-4f6f-8881-68f36d484830"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Parse Groq Response').item.json.email }}",
+        "subject": "=Останній крок — 15 хвилин вашого часу",
+        "message": "=<h2>Пропозиція, яка вирішить вашу задачу</h2>\n<p>Ми проаналізували ваш запит і готові запропонувати конкретне рішення</p>\n<p>для автоматизації <b>{{ $('Parse Groq Response').item.json.project_type }}</b>.</p>\n<p><b>Пропоную 15-хвилинний дзвінок</b>, де покажу:</p>\n<ul>\n  <li>Точну схему автоматизації для вашого бізнесу</li>\n  <li>Строки та вартість впровадження</li>\n  <li>Відповіді на всі питання</li>\n</ul>\n<p>Відповідайте на цей лист зручний час — і ми призначимо дзвінок.</p>\n<p>Пропозиція дійсна до кінця тижня.</p>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        656,
+        -80
+      ],
+      "id": "149a149a-84d4-40f5-9872-e2c7ab6c1e13",
+      "name": "Gmail: Email 1 — Welcome2",
+      "webhookId": "5eee2785-6807-4bd2-928d-c2bfa940152b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lwzxWGQhFbTyDBWS",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "{{ $json.email }}",
+        "subject": "Щодо вашого запиту на автоматизацію",
+        "message": "=<p>Вітаємо, {{ $('Parse Groq Response').item.json.name }}!</p>\n<p>Дякуємо за ваш інтерес до автоматизації.\nНа жаль, на даному етапі ми не зможемо взятись за ваш проект —\nнаша спеціалізація краще підходить для проектів більшого масштабу.</p>\n<p>Ми зберегли ваші контакти і, можливо, зв'яжемось у майбутньому,\nякщо з'являться підходящі можливості.</p>\n<p>Бажаємо успіху у вашому бізнесі!</p>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -64,
+        160
+      ],
+      "id": "eacace3f-a2f0-4ff4-92f2-55fcfbd7ebc3",
+      "name": "Gmail: Cold Rejection",
+      "webhookId": "5eee2785-6807-4bd2-928d-c2bfa940152b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lwzxWGQhFbTyDBWS",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Agency CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "disqualified",
+            "timestamp ": "={{ $('Parse Groq Response').item.json['timestamp '] }}",
+            "lead_id": "={{ $('Parse Groq Response').item.json['lead_id '] }}"
+          },
+          "matchingColumns": [
+            "lead_id"
+          ],
+          "schema": [
+            {
+              "id": "timestamp ",
+              "displayName": "timestamp ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "budget",
+              "displayName": "budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "deadline",
+              "displayName": "deadline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "project_type",
+              "displayName": "project_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "score",
+              "displayName": "score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_comment",
+              "displayName": "ai_comment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "envelope_id",
+              "displayName": "envelope_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "signed_date",
+              "displayName": "signed_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        144,
+        160
+      ],
+      "id": "b8789ec5-b418-4c3a-aa8b-09d58577572b",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/deals",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"properties\": {\n    \"dealname\":  \"{{ $('Parse Groq Response').item.json.name }} — {{ $('Parse Groq Response').item.json.project_type }}\",\n    \"amount\":    \"{{ $('Parse Groq Response').item.json.budget.replace(/[^0-9]/g, ' ') }}\",\n    \"dealstage\": \"appointmentscheduled\",\n    \"pipeline\":  \"default\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -480,
+        32
+      ],
+      "id": "82e4f35f-be94-4379-8cc5-d65f3c2db2c5",
+      "name": "HubSpot: Create Deal",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "hubspot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Hot Lead": {
+      "main": [
+        [
+          {
+            "node": "Gmail: Email 1 — Welcome",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail: Cold Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Groq: Qualify Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq: Qualify Lead": {
+      "main": [
+        [
+          {
+            "node": "Parse Groq Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Groq Response": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Update Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Update Score": {
+      "main": [
+        [
+          {
+            "node": "HubSpot: Create Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HubSpot: Create Contact": {
+      "main": [
+        [
+          {
+            "node": "HubSpot: Create Deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail: Email 1 — Welcome": {
+      "main": [
+        [
+          {
+            "node": "Amount: 1, Unit: Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Amount: 1, Unit: Days": {
+      "main": [
+        [
+          {
+            "node": "Gmail: Email 1 — Welcome1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail: Email 1 — Welcome1": {
+      "main": [
+        [
+          {
+            "node": "Amount: 1, Unit: Days1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Amount: 1, Unit: Days1": {
+      "main": [
+        [
+          {
+            "node": "Gmail: Email 1 — Welcome2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail: Email 1 — Welcome2": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail: Cold Rejection": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HubSpot: Create Deal": {
+      "main": [
+        [
+          {
+            "node": "Is Hot Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "43b19680-a6c2-4aa1-984c-0a6e325b1243",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "qHq7Iy8rhHPfDfde",
+  "tags": []
+}
