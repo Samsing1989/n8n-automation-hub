@@ -1,0 +1,493 @@
+{
+  "name": "WF - 29d Agency Price Calculator",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1456,
+        -176
+      ],
+      "id": "NODE_TELEGRAM_TRIGGER",
+      "name": "Telegram Trigger",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Pavlo bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "94ca7dd3-bb66-4b46-a588-81fbc8f19ffe",
+                    "leftValue": "={{ $json.message.text.startsWith('/price') }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "/price"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5220d5be-c38e-4598-a5cb-f9deaa5145c8",
+                    "leftValue": "={{ ['1', '2', '3', '4', '5', '6'].includes($json.message.text.trim()) }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "1-6"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f8cb0ae5-68cc-4485-a88d-eb21713adc30",
+                    "leftValue": "={{ $json.message.text.startsWith('/consult') }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "=/consult"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a5362395-4998-4d13-a0da-ad0c2687e590",
+                    "leftValue": "={{ $json.message.text.includes('\\n')}}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "n"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -1216,
+        -224
+      ],
+      "id": "NODE_ROUTE_SERVICE_TYPE",
+      "name": "Route Service Type"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.item.json.message.text.trim();\n\n// Якщо це сам /price — показуємо меню\nif (text === '/price') {\nreturn [{ json: {\nchat_id: $input.item.json.message.chat.id,\ntext: `🤖 *Калькулятор вартості автоматизації*\\n\\nЯкий тип автоматизації вас цікавить?\\n\\n1️⃣ Telegram бот\\n2️⃣ CRM інтеграція\\n3️⃣ E-commerce\\n4️⃣ AI агент\\n5️⃣ Соцмережі\\n6️⃣ Комплексне рішення\\n\\nНапишіть номер або опишіть задачу`\n}}];\n}\n\n// Якщо це вибір (1-6) — показуємо ціну\nconst prices = {\n'1': { name: 'Telegram бот', min: 150, max: 300, days: '3-5' },\n'2': { name: 'CRM інтеграція', min: 200, max: 400, days: '5-7' },\n'3': { name: 'E-commerce', min: 350, max: 700, days: '7-10' },\n'4': { name: 'AI агент', min: 250, max: 500, days: '5-8' },\n'5': { name: 'Соцмережі', min: 150, max: 300, days: '3-5' },\n'6': { name: 'Комплексне рішення', min: 500, max: 1500, days: '14-21' }\n};\n\nconst p = prices[text] || prices['6'];\n\nreturn [{ json: {\nchat_id: $input.item.json.message.chat.id,\ntext: `💰 *Орієнтовна вартість: ${p.name}*\\n\\nВід $${p.min} до $${p.max}\\nТермін: ${p.days} робочих днів\\n\\nДля точного розрахунку напишіть /consult`\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -912,
+        -416
+      ],
+      "id": "NODE_CALCULATE_BASIC_PRICE",
+      "name": "Calculate Basic Price"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id}}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -688,
+        -336
+      ],
+      "id": "NODE_SEND_BASIC_QUOTE",
+      "name": "Send Basic Quote",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Pavlo bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const chatId = $input.item.json.message.chat.id;\nconst firstName = $input.item.json.message.chat.first_name || 'Клієнт';\n\nreturn [{ json: {\nchat_id: chatId,\ntext: `👋 Привіт, ${firstName}!\\n\\nДля безкоштовної консультації надішли свої дані у форматі:\\n\\n📝 *Ім'я Прізвище*\\n📱 *Телефон*\\n📧 *Email*\\n\\nНаприклад:\\n_Іван Петренко_\\n_+380991234567_\\n_ivan@gmail.com_`\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -912,
+        -256
+      ],
+      "id": "NODE_CALCULATE_CONSULT_PRICE",
+      "name": "Calculate Consult Price"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.item.json.message.text.trim();\nconst chatId = $input.item.json.message.chat.id;\nconst lines = text.split('\\n').map(l => l.trim());\n\nconst name = lines[0] || 'Невідомо';\nconst phone = lines[1] || 'Не вказано';\nconst email = lines[2] || 'Не вказано';\nconst date = new Date().toLocaleDateString('uk-UA');\n\nreturn [{ json: {\nchat_id: chatId,\nname: name,\nphone: phone,\nemail: email,\ndate: date,\n// Повідомлення клієнту\nclient_text: `✅ Дякую, ${name}!\\n\\nТвої дані отримані:\\n📱 ${phone}\\n📧 ${email}\\n\\nЯ зв'яжусь з тобою протягом *2 годин*! 🚀`,\n// Сповіщення тобі\nowner_text: `🔥 *НОВИЙ ЛІД НА КОНСУЛЬТАЦІЮ*\\n\\n👤 Ім'я: ${name}\\n📱 Телефон: ${phone}\\n📧 Email: ${email}\\n📅 Дата: ${date}\\n\\nЗателефонуй якнайшвидше!`\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -912,
+        -80
+      ],
+      "id": "NODE_PREPARE_CUSTOM_QUOTE",
+      "name": "Prepare Custom Quote"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Agency CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1089135777,
+          "mode": "list",
+          "cachedResultName": "LIDLS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1089135777"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Spreadsheet": "Agency CRM",
+            "sheet": "LEADS",
+            "Статус": "Новий",
+            "Ім'я": "={{ $json.name }}",
+            "Телефон": "={{ $json.phone }}",
+            "Email": "={{ $json.email }}",
+            "Дата": "={{ $json.date }}",
+            "Джерело": "Telegram /consult"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Spreadsheet",
+              "displayName": "Spreadsheet",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sheet",
+              "displayName": "sheet",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Ім'я",
+              "displayName": "Ім'я",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Телефон",
+              "displayName": "Телефон",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус",
+              "displayName": "Статус",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Дата",
+              "displayName": "Дата",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Джерело",
+              "displayName": "Джерело",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -672,
+        -80
+      ],
+      "id": "NODE_LOG_QUOTE_TO_SHEETS",
+      "name": "Log Quote to Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Prepare Custom Quote').item.json.chat_id }}",
+        "text": "={{ $('Prepare Custom Quote').item.json.owner_text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -464,
+        -80
+      ],
+      "id": "NODE_SEND_CUSTOM_QUOTE",
+      "name": "Send Custom Quote",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Pavlo bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "=Введіть /price щоб приблизно взнати ціну",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -912,
+        96
+      ],
+      "id": "NODE_SEND_DEFAULT_MESSAGE",
+      "name": "Send Default Message",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Pavlo bot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Route Service Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Service Type": {
+      "main": [
+        [
+          {
+            "node": "Calculate Basic Price",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calculate Basic Price",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calculate Consult Price",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Custom Quote",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Default Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Basic Price": {
+      "main": [
+        [
+          {
+            "node": "Send Basic Quote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Basic Quote": {
+      "main": [
+        []
+      ]
+    },
+    "Calculate Consult Price": {
+      "main": [
+        [
+          {
+            "node": "Send Basic Quote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Custom Quote": {
+      "main": [
+        [
+          {
+            "node": "Log Quote to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Quote to Sheets": {
+      "main": [
+        [
+          {
+            "node": "Send Custom Quote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "YOUR_VERSION_ID",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": []
+}

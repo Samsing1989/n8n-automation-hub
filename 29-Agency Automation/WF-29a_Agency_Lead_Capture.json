@@ -1,0 +1,234 @@
+{
+  "name": "WF - 29a Agency Lead Capture",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agency-lead",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -752,
+        -384
+      ],
+      "id": "NODE_AGENCY_LEAD_CAPTURE",
+      "name": "Agency - Lead Capture",
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={ name: $json.body.name, email: $json.body.email, telegram: $json.body.telegram||'', company: $json.body.company||'', budget: $json.body.budget||'не вказано', source: $json.body.source||'website', date: $now.toFormat('dd.MM.yyyy HH:mm'), status: 'Новий', id: 'LEAD-'+$now.toMillis() }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -592,
+        -384
+      ],
+      "id": "NODE_NORMALIZE_LEAD_DATA",
+      "name": "Normalize Lead Data"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Agency CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "LEADS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $json.id }}",
+            "Ім'я": "={{ $json.name }}",
+            "Email": "={{ $json.email }}",
+            "Telegram": "={{ $json.telegram }}",
+            "Компанія": "={{ $json.company }}",
+            "Бюджет": "={{ $json.budget }}",
+            "Джерело": "={{ $json.source }}",
+            "Статус": "={{ $json.status }}",
+            "Дата": "={{ $json.date }}"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -416,
+        -384
+      ],
+      "id": "NODE_SAVE_LEAD_TO_SHEETS",
+      "name": "Save Lead to Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "deal",
+        "stage": "appointmentscheduled",
+        "additionalFields": {
+          "amount": "={{ $('Normalize Lead Data').item.json.budget }}",
+          "closeDate": "={{ $now.plus({days:30}).toMillis() }}",
+          "dealName": "={{ $('Normalize Lead Data').item.json.name }}",
+          "pipeline": "default"
+        }
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        -208,
+        -384
+      ],
+      "id": "NODE_CREATE_HUBSPOT_DEAL",
+      "name": "Create HubSpot Deal",
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "email": "={{ $('Normalize Lead Data').item.json.email }}",
+        "additionalFields": {
+          "companyName": "={{ $('Normalize Lead Data').item.json.company }}",
+          "firstName": "={{ $('Normalize Lead Data').item.json.name }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        -384
+      ],
+      "id": "NODE_UPSERT_HUBSPOT_CONTACT",
+      "name": "Upsert HubSpot Contact",
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🔥 НОВИЙ ЛІД!\n👤 {{ $('Normalize Lead Data').item.json.name }}\n📧 {{ $('Normalize Lead Data').item.json.email }}\n💰 {{ $('Normalize Lead Data').item.json.budget }}\n📊 {{ $('Normalize Lead Data').item.json.source }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        208,
+        -384
+      ],
+      "id": "NODE_NOTIFY_MANAGER_TELEGRAM",
+      "name": "Notify Manager Telegram",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Agency - Lead Capture": {
+      "main": [
+        [
+          {
+            "node": "Normalize Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Save Lead to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Lead to Sheets": {
+      "main": [
+        [
+          {
+            "node": "Create HubSpot Deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create HubSpot Deal": {
+      "main": [
+        [
+          {
+            "node": "Upsert HubSpot Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert HubSpot Contact": {
+      "main": [
+        [
+          {
+            "node": "Notify Manager Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "YOUR_VERSION_ID",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": []
+}

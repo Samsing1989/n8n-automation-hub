@@ -1,0 +1,795 @@
+{
+  "name": "WF - 29b Agency Project Tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2544,
+        -800
+      ],
+      "id": "NODE_TELEGRAM_TRIGGER",
+      "name": "Telegram Trigger",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Pavlo bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.text.startsWith('/newproject') }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "4f3c7613-e2fc-4c6c-996a-52bcdc6f245a"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "New Project"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "16cad04f-3ec2-495a-801c-89ffe1113389",
+                    "leftValue": "={{ $json.message.text.trim() === '/status' }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Show Status"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2bf99638-e3e3-4667-800e-8f5f653bcab9",
+                    "leftValue": "={{ $json.message.text.startsWith('/update') }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Update Project"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a286ce98-6e7e-443c-9ece-13e1a85a1ccf",
+                    "leftValue": "={{ $json.message.text === '/report' }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Weekly Report"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -2400,
+        -848
+      ],
+      "id": "NODE_ROUTE_PROJECT_ACTION",
+      "name": "Route Project Action"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Отримуємо повний текст команди\nconst fullText = $('Telegram Trigger').item.json.message.text;\n\n// Видаляємо \"/newproject \" з початку\nconst data = fullText.replace('/newproject', '').trim();\n\n// Розбиваємо по роздільнику\nconst parts = data.split('|').map(p => p.trim());\n\n// Перевірка що всі дані введені\nif (parts.length < 4 || !parts[0]) {\nthrow new Error('Невірний формат даних');\n}\n\nreturn [{\njson: {\nid: 'PROJ-' + Date.now(),\nclient: parts[0],\ntype: parts[1] || '',\ndeadline: parts[2] || '',\npayment: parts[3] || '',\nstatus: 'В роботі',\ncreated: new Date().toLocaleDateString('uk-UA')\n}\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2064,
+        -1056
+      ],
+      "id": "NODE_PREPARE_NEW_PROJECT",
+      "name": "Prepare New Project"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Agency CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1607063712,
+          "mode": "list",
+          "cachedResultName": "PROJECTS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1607063712"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $json.id }}",
+            "Клієнт": "={{ $json.client }}",
+            "Тип проекту": "={{ $json.type }}",
+            "Статус": "={{ $json.status }}",
+            "Дедлайн": "={{ $json.deadline }}",
+            "Оплата": "={{ $json.payment }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Клієнт",
+              "displayName": "Клієнт",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Тип проекту",
+              "displayName": "Тип проекту",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус",
+              "displayName": "Статус",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Дедлайн",
+              "displayName": "Дедлайн",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Оплата",
+              "displayName": "Оплата",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Workflow URL",
+              "displayName": "Workflow URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Завершено",
+              "displayName": "Завершено",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1872,
+        -1056
+      ],
+      "id": "NODE_SAVE_NEW_PROJECT",
+      "name": "Save New Project",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Agency CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1607063712,
+          "mode": "list",
+          "cachedResultName": "PROJECTS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1607063712"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Статус",
+              "lookupValue": "В роботі"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -2064,
+        -912
+      ],
+      "id": "NODE_READ_PROJECT_DATA",
+      "name": "Read Project Data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all(); let msg = '📊 *Активні проекти:*\\n\\n'; rows.forEach(r => { const d = r.json; msg += `🔹 *${d.ID}*\\n`; msg += `👤 ${d['Клієнт']}\\n`; msg += `💼 ${d['Тип проекту']}\\n`; msg += `📅 ${d['Дедлайн']}\\n`; msg += `💰 ${d['Оплата']} грн\\n`; msg += `🔄 ${d['Статус']}\\n\\n`; }); return [{ json: { text: msg } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1904,
+        -912
+      ],
+      "id": "NODE_FORMAT_STATUS_REPORT",
+      "name": "Format Status Report"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1712,
+        -912
+      ],
+      "id": "NODE_SEND_STATUS_TELEGRAM",
+      "name": "Send Status Telegram",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Pavlo bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const txt = $('Telegram Trigger').item.json.message?.text || '/update 2 | Завершено';\n\nconst data = txt.replace('/update', '').trim();\nconst parts = data.split('|').map(p => p.trim());\n\nconst rowNumber = parseInt(parts[0]);\nconst newStatus = parts[1] || 'Завершено';\n\nreturn [{\njson: {\nrow: rowNumber + 1,\nstatus: newStatus,\ntext: 'Проект ' + rowNumber + ' оновлено на ' + newStatus\n}\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2064,
+        -768
+      ],
+      "id": "NODE_PREPARE_PROJECT_UPDATE",
+      "name": "Prepare Project Update"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Agency CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1607063712,
+          "mode": "list",
+          "cachedResultName": "PROJECTS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1607063712"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Статус": "={{ $json.status }}",
+            "text": "={{ $json.text }}",
+            "row_number": "={{ $json.row }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Клієнт",
+              "displayName": "Клієнт",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Тип проекту",
+              "displayName": "Тип проекту",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Статус",
+              "displayName": "Статус",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Дедлайн",
+              "displayName": "Дедлайн",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Оплата",
+              "displayName": "Оплата",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Workflow URL",
+              "displayName": "Workflow URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Завершено",
+              "displayName": "Завершено",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "text",
+              "displayName": "text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1872,
+        -768
+      ],
+      "id": "NODE_UPDATE_PROJECT_SHEETS",
+      "name": "Update Project Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1712,
+        -768
+      ],
+      "id": "NODE_CONFIRM_UPDATE_TELEGRAM",
+      "name": "Confirm Update Telegram",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Pavlo bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Agency CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1607063712,
+          "mode": "list",
+          "cachedResultName": "PROJECTS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1607063712"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -2064,
+        -592
+      ],
+      "id": "NODE_READ_WEEKLY_DATA",
+      "name": "Read Weekly Data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all(); let inWork = 0, done = 0, total = 0; rows.forEach(r => { const d = r.json; if (d['Статус'] === 'В роботі') inWork++; if (d['Статус'] === 'Завершено') done++; total += parseInt(d['Оплата']) || 0; }); const date = new Date() .toLocaleDateString('uk-UA'); return [{ json: { text: `📈 *Звіт Agency*\\n📅 ${date}\\n\\n`+ `📁 Всього: ${rows.length}\\n`+ `🔄 В роботі: ${inWork}\\n`+ `✅ Завершено: ${done}\\n`+ `💰 Сума: ${total.toLocaleString('uk-UA')} грн` }}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1872,
+        -608
+      ],
+      "id": "NODE_FORMAT_WEEKLY_REPORT",
+      "name": "Format Weekly Report"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1712,
+        -592
+      ],
+      "id": "NODE_SEND_WEEKLY_REPORT",
+      "name": "Send Weekly Report",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Pavlo bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.from.id }}",
+        "text": "=🤖 Agency Project Tracker  Доступні команди:  📁 /newproject Клієнт Тип Дедлайн \n Оплата Створити новий проект Приклад: \n/newproject ТОВ Ромашка Telegram Bot 25.12.2024 15000  \n📊 /status Показати всі активні проекти  \n✏️ /update ID Новий статус Оновити статус проекту Приклад: /update PROJ-123 \n Завершено  \n📈 /report Тижневий звіт по проектах",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -2064,
+        -432
+      ],
+      "id": "NODE_SEND_HELP_MESSAGE",
+      "name": "Send Help Message",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Pavlo bot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Route Project Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Project Action": {
+      "main": [
+        [
+          {
+            "node": "Prepare New Project",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Project Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Project Update",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Weekly Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Help Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare New Project": {
+      "main": [
+        [
+          {
+            "node": "Save New Project",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Project Data": {
+      "main": [
+        [
+          {
+            "node": "Format Status Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Status Report": {
+      "main": [
+        [
+          {
+            "node": "Send Status Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Project Update": {
+      "main": [
+        [
+          {
+            "node": "Update Project Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Project Sheets": {
+      "main": [
+        [
+          {
+            "node": "Confirm Update Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Weekly Data": {
+      "main": [
+        [
+          {
+            "node": "Format Weekly Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Weekly Report": {
+      "main": [
+        [
+          {
+            "node": "Send Weekly Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Help Message": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "YOUR_VERSION_ID",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": []
+}
