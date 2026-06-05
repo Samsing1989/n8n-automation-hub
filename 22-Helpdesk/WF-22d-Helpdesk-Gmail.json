@@ -1,0 +1,333 @@
+{
+  "name": "WF - 22d Helpdesk Gmail",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1552,
+        -688
+      ],
+      "id": "2d9ac388-0b47-447c-b9f5-d99cce4b33dd",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d40620d9-7bf8-4c79-b12d-e312b9279dae",
+              "name": "source ",
+              "value": "email",
+              "type": "string"
+            },
+            {
+              "id": "b26f9029-b69e-4e0b-a431-af6919110ac0",
+              "name": "name ",
+              "value": "={{ $json.To.replace(/<.*?>/, \"\").trim().replace(/\"/g, \"\") }}",
+              "type": "string"
+            },
+            {
+              "id": "cae61a47-a9a5-4de2-a883-860a3eda55ad",
+              "name": "email ",
+              "value": "={{ $json.From.match(/<(.+?)>/)?.[1] ?? $json.From }}",
+              "type": "string"
+            },
+            {
+              "id": "fbaf3074-d93f-4e79-b02d-e3dda8ce7673",
+              "name": "message ",
+              "value": "={{ $json.snippet }}",
+              "type": "string"
+            },
+            {
+              "id": "54d74810-d103-49c3-ad2b-2ac9faa6e99e",
+              "name": "ticket_id ",
+              "value": "={{ Date.now().toString() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1360,
+        -688
+      ],
+      "id": "b290f367-430d-4afe-bfd2-da0464bb3219",
+      "name": "Normalize Ticket Data"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Helpdesk Tickets",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tickets",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ new Date().toISOString() }}",
+            "Source": "={{ $json['source '] }}",
+            "Name": "={{ $json['name '] }}",
+            "Email": "={{ $json['email '] }}",
+            "Message": "={{ $json['message '] }}",
+            "Status": "new"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1184,
+        -688
+      ],
+      "id": "53fb99e2-c032-44d1-83df-a86caf980844",
+      "name": "Save Ticket to Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=Новий тікет #{{ $('Normalize Ticket Data').item.json['ticket_id '] }}\nДжерело: {{ $('Normalize Ticket Data').item.json['source '] }}\nВід:  {{ $('Normalize Ticket Data').item.json['name '] }}\nEmail:{{ $('Normalize Ticket Data').item.json['email '] }}\nПовідомлення: {{ $('Normalize Ticket Data').item.json['message '] }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -976,
+        -688
+      ],
+      "id": "3956f304-bae6-4874-8e1b-7b65052492b0",
+      "name": "Notify Agent Telegram",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a23180c4-5ff7-47c4-83ff-c09e396f5a6a",
+              "leftValue": "={{ $('Normalize Ticket Data').item.json['source '] }}",
+              "rightValue": "email",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -768,
+        -688
+      ],
+      "id": "b4b0080f-a8d5-4771-8dba-db41390c9594",
+      "name": "Check Priority"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Gmail Trigger').item.json.From }}",
+        "subject": "Ваш запит отримано",
+        "emailType": "text",
+        "message": "=Ваш лист отримано!   \nНомер тікету: #{{ $('Normalize Ticket Data').item.json['ticket_id '] }}\nМи розглянемо його найближчим часом. Дякуємо за звернення!",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -560,
+        -784
+      ],
+      "id": "c7edc6e5-8556-4771-bb74-b6f5d62a6d4e",
+      "name": "Send Auto Reply Gmail",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Ticket Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Ticket Data": {
+      "main": [
+        [
+          {
+            "node": "Save Ticket to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Ticket to Sheets": {
+      "main": [
+        [
+          {
+            "node": "Notify Agent Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Agent Telegram": {
+      "main": [
+        [
+          {
+            "node": "Check Priority",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Priority": {
+      "main": [
+        [
+          {
+            "node": "Send Auto Reply Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "YOUR_VERSION_ID",
+  "meta": {
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": []
+}
