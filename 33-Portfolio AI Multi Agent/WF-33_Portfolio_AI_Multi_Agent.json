@@ -1,0 +1,462 @@
+{
+  "name": "WF - 33 Portfolio AI — Multi-Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -752,
+        192
+      ],
+      "id": "NODE_TELEGRAM_TRIGGER",
+      "name": "Telegram Trigger",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "question",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "chat_id",
+              "value": "={{ $json.message.chat.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -560,
+        192
+      ],
+      "id": "NODE_EDIT_FIELDS",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "ai chat memory",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "sheet2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "chat_id",
+              "lookupValue": "={{ $node[\"Telegram Trigger\"].json['message']['chat']['id'] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -384,
+        192
+      ],
+      "id": "NODE_GET_ROW_SHEET",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $(\"Get row(s) in sheet\").all();\nlet history = [];\nrows.forEach(row => {\n  if (row.json.user_message) { history.push({ role: \"user\", content: row.json.user_message }); }\n  if (row.json.assistant_response) { history.push({ role: \"assistant\", content: row.json.assistant_response }); }\n});\nreturn { history: history, chatId: $(\"Telegram Trigger\").first().json.message.chat.id };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        192
+      ],
+      "id": "NODE_CODE_JS1",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"Ти АНАЛІТИК. Відповідай фактами. Починай з [АНАЛІТИК]. Макс 80 слів. Українською.\"},\n    {\"role\": \"user\", \"content\": \"Питання: {{ $('Edit Fields').item.json.question }}\"}\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        -16
+      ],
+      "id": "NODE_ANALYST",
+      "name": "Analyst",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "groq"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"Ти АДВОКАТ ДИЯВОЛА. Критикуй. Починай з [ДИЯВОЛ]. Макс 80 слів. Українською.\"},\n    {\"role\": \"user\", \"content\": \"Питання: {{ $('Edit Fields').item.json.question }}\\n\\nАналітик сказав: {{ $json.choices[0].message.content }}\"}\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        192
+      ],
+      "id": "NODE_DEVIL",
+      "name": "Devil",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "groq"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n\"model\": \"llama-3.3-70b-versatile\",\n\"messages\": [\n{\"role\": \"system\", \"content\": \"Ти — Візіонер. Твоє завдання: запропонувати нестандартний погляд на питання користувача, дивлячись у майбутнє та шукаючи нові можливості. Відповідай українською.\"},\n...($('Code in JavaScript1').first().json.history || []),\n{\"role\": \"user\", \"content\": $('Telegram Trigger').first().json.message.text}\n]\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        416
+      ],
+      "id": "NODE_VISIONARY",
+      "name": "Visionary",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "groq"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n\"model\": \"llama-3.3-70b-versatile\",\n\"messages\": [\n{\"role\": \"system\", \"content\": \"Ти — експертний помічник. Сформуй одну ідеальну відповідь на основі думок аналітиків. ЗАБОРОНЕНО писати фрази типу: 'Ось відповідь', 'Мій аналіз'. Одразу пиши суть відповіді українською мовою.\"},\n...($('Code in JavaScript1').first().json.history || []),\n{\"role\": \"user\", \"content\": `Напиши чисту відповідь на питання: \"${$('Telegram Trigger').first().json.message.text}\"\\n\\nВаріанти аналітиків:\\n1. ${$('Analyst').first().json.choices[0].message.content}\\n2. ${$('Devil').first().json.choices[0].message.content}\\n3. ${$('Visionary').first().json.choices[0].message.content}`}\n]\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        272,
+        160
+      ],
+      "id": "NODE_JUDGE",
+      "name": "Judge",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "groq"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const finalAnswer = $('Judge').item.json.choices[0].message.content;\nconst chat_id = $('Edit Fields').item.json.chat_id;\nconst text = `${finalAnswer}`;\nreturn { json: { text: text, chat_id: chat_id } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        160
+      ],
+      "id": "NODE_CODE_JS",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        704,
+        160
+      ],
+      "id": "NODE_TELEGRAM_SEND",
+      "name": "Telegram",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "ai chat memory",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "sheet2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ $node[\"Telegram Trigger\"].json[\"message\"][\"chat\"][\"id\"] }}",
+            "assistant_response": "={{$node[\"Judge\"].json.choices[0].message.content}}",
+            "timestamp": "={{ $now }}",
+            "user_message": "={{ $node[\"Telegram Trigger\"].json[\"message\"][\"text\"] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "user_message",
+              "displayName": "user_message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "assistant_response",
+              "displayName": "assistant_response",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        912,
+        160
+      ],
+      "id": "NODE_APPEND_ROW",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyst": {
+      "main": [
+        [
+          {
+            "node": "Devil",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Devil": {
+      "main": [
+        [
+          {
+            "node": "Visionary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Visionary": {
+      "main": [
+        [
+          {
+            "node": "Judge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Judge": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "YOUR_VERSION_ID",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": []
+}
